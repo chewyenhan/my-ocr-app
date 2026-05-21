@@ -1,0 +1,170 @@
+/* ================= 极致大屏优化 ================= */
+body {
+    background: #2b2b2b;
+    font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    margin: 0; padding: 0;
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; font-weight: 900;
+}
+
+.panel {
+    background: #f4ecd8;
+    border: 15px double #8b0000;
+    width: 95vw; max-width: 1300px;
+    height: 92vh; padding: 40px;
+    box-shadow: 0 0 100px rgba(0,0,0,0.8);
+    display: none; flex-direction: column;
+    box-sizing: border-box; border-radius: 10px;
+    position: relative;
+}
+
+.panel.active { display: flex; }
+
+h1 { font-size: 3.8em; color: #5c1616; text-align: center; margin: 5px 0; text-shadow: 3px 3px 0px #fff; }
+
+#story-text {
+    font-size: 2.1em; line-height: 1.4;
+    margin: 10px 0; background: rgba(255, 255, 255, 0.4);
+    padding: 20px; border-radius: 10px;
+    border-left: 20px solid #8b0000;
+    overflow-y: auto; color: #1a1a1a;
+    flex: 1;
+    min-height: 150px;
+}
+
+.choice-btn, .sys-btn {
+    background: #8b0000; color: #fff;
+    font-size: 1.8em; font-weight: 900;
+    padding: 25px; border: 5px solid #000;
+    cursor: pointer; border-radius: 15px;
+    margin: 10px 0; width: 100%;
+    box-shadow: 0 8px 0 #333;
+}
+.choice-btn:hover { background: #ff0000; transform: scale(1.01); }
+.choice-btn:active { transform: translateY(5px); box-shadow: 0 2px 0 #333; }
+
+#status-bar {
+    background: #5c1616; color: gold;
+    padding: 15px 30px; display: flex;
+    justify-content: space-between; font-size: 1.8em;
+    border-radius: 10px; margin-bottom: 10px;
+}
+
+#ai-area {
+    display: none; flex-direction: column;
+    background: #fff; border: 6px solid #8b0000;
+    padding: 15px; border-radius: 15px; 
+    height: 380px; 
+    margin-top: 10px; 
+    position: relative;
+}
+#chat-box {
+    flex-grow: 1; overflow-y: auto;
+    font-size: 1.6em; padding: 10px; background: #fdfdfd;
+    border-bottom: 3px solid #eee;
+}
+.msg { margin: 10px 0; padding: 15px; border-radius: 8px; border: 2px solid transparent; }
+.king-msg, .msg.king { background: #ffdada; color: #8b0000; border-color: #8b0000; }
+.player-msg, .msg.user { background: #dadaff; color: #00008b; text-align: right; border-color: #00008b; }
+
+.group-input { font-size: 2em; width: 80%; padding: 15px; text-align: center; border: 5px solid #8b0000; }
+
+#vol-ctrl { 
+    position: fixed; top: 10px; left: 10px; 
+    background: rgba(255,255,255,0.9); padding: 15px; 
+    border: 3px solid #000; z-index: 1000;
+    border-radius: 10px; box-shadow: 5px 5px 0 #8b0000;
+}
+.vol-item { margin-bottom: 10px; font-size: 1.2em; font-weight: bold; }
+
+.highlight { color: #d00; font-size: 1.1em; }
+
+.back-hall-btn {
+    position: absolute; top: -50px; right: 10px;
+    background: #444; color: #fff; padding: 5px 15px;
+    border-radius: 10px; font-size: 1.2em; cursor: pointer;
+    border: 2px solid #000;
+}
+
+#choice-area {
+    max-height: 40%;
+    overflow-y: auto;
+}
+
+#custom-toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.85); color: #fff; padding: 15px 30px;
+    border-radius: 8px; z-index: 9999; font-size: 1.5em; border: 2px solid gold;
+    display: none; text-align: center;
+}
+
+/* ==========================================
+   新增：场景与角色图片样式 (卡通风格)
+   ========================================== */
+#scene-img-area {
+    width: 100%;
+    text-align: center; /* 图片居中 */
+    margin: 15px 0;    /* 上下留出一点间距 */
+    min-height: 100px;  /* 即使没图时也占一点位，防止文字乱跳 */
+}
+
+.ending-meta {
+    margin-top: 10px;
+    font-size: 1.2em;
+    opacity: 0.9;
+}
+.ending-body {
+    margin-top: 12px;
+    font-size: 1.8em;
+    line-height: 1.4;
+    background: rgba(255,255,255,0.45);
+    padding: 15px 18px;
+    border-radius: 10px;
+    border-left: 12px solid #8b0000;
+}
+.ending-role {
+    margin-top: 12px;
+    font-size: 1.5em;
+    font-weight: 900;
+    color: #5c1616;
+}
+.ending-key {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: #8b0000;
+    color: #fff;
+    font-weight: 900;
+}
+.ending-tip {
+    margin-top: 12px;
+    font-size: 1.2em;
+    opacity: 0.85;
+}
+
+.scene-img {
+    max-width: 320px;   /* 限制图片宽度，不要遮住文字 */
+    max-height: 280px;  /* 限制图片高度 */
+    border: 6px solid #8b0000; /* 深红色厚边框，增加卡通感 */
+    border-radius: 15px;       /* 圆角 */
+    background: #fff;          /* 白色底座，防止透明图在深色背景下看不清 */
+    padding: 10px;             /* 图片离边框一点距离 */
+    box-shadow: 8px 8px 0px rgba(0,0,0,0.2); /* 硬核阴影，增加立体感 */
+    transition: transform 0.3s; /* 增加一个微小的鼠标经过动画 */
+}
+
+.scene-img:hover {
+    transform: scale(1.05); /* 鼠标指上去时轻微放大 */
+}
+
+/* 📢 统一图片样式：自适应宽度，避免重复定义覆盖 */
+.scene-img {
+    max-width: 100%;
+    max-height: 300px;
+    border: 6px solid #8b0000;
+    border-radius: 15px;
+    background: #fff;
+    padding: 10px;
+    box-shadow: 8px 8px 0px rgba(0,0,0,0.2);
+    transition: transform 0.3s;
+}

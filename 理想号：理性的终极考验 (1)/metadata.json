@@ -1,0 +1,6 @@
+{
+  "name": "理想号：理性的终极考验",
+  "description": "一个关于政治哲学与启蒙思想的互动式理性决策考验游戏，配有精美UI、声音控制、以及理性的三重考验。",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

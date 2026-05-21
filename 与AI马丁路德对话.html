@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>1521 威登堡：路德真理堂</title>
+    <style>
+        :root { --gold: #d4af37; --ink: #2b1b17; --paper: #fdf5e6; }
+        body { background: #121212; font-family: "楷体", "STKaiti", serif; margin: 0; padding: 20px; color: var(--ink); display: flex; flex-direction: column; align-items: center; }
+        
+        /* 顶部配置区 */
+        #config { width: 100%; max-width: 850px; background: #222; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #444; color: #ccc; }
+        .row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+        input, select, button { padding: 10px; border-radius: 6px; border: none; font-size: 15px; }
+        input[type="password"] { flex: 1; }
+        #scan-btn { background: #2e7d32; color: white; cursor: pointer; font-weight: bold; }
+        #voice-test-btn { background: #1565c0; color: white; cursor: pointer; }
+
+        /* 聊天主界面 - 横向布局防止挡字 */
+        #chat-box { width: 100%; max-width: 850px; height: 80vh; background: var(--paper); border: 8px solid var(--ink); border-radius: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 50px rgba(0,0,0,0.8); }
+        
+        /* 顶栏：头像和名字并排 */
+        #header { background: var(--ink); padding: 20px 40px; display: flex; align-items: center; gap: 30px; border-bottom: 5px solid var(--gold); }
+        #portrait { 
+            width: 140px; height: 140px; 
+            border-radius: 50%; border: 4px solid var(--gold); 
+            object-fit: cover; background: #fff; box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        .header-info h1 { color: var(--gold); margin: 0; font-size: 2.2em; letter-spacing: 4px; }
+        .header-info p { color: #aaa; margin: 10px 0 0; font-size: 1.1em; font-style: italic; }
+
+        /* 对话区 */
+        #display { flex: 1; padding: 30px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; background-image: linear-gradient(rgba(230,220,200,0.3) 1px, transparent 1px); background-size: 100% 30px; }
+        .bubble { max-width: 80%; padding: 18px 25px; border-radius: 15px; font-size: 1.4em; line-height: 1.6; position: relative; box-shadow: 2px 5px 15px rgba(0,0,0,0.1); }
+        .luther { align-self: flex-start; background: #fff; border-left: 10px solid #8d230f; color: #1a1a1a; }
+        .student { align-self: flex-end; background: #3e2723; color: #fff; border-radius: 15px 15px 0 15px; }
+
+        /* 输入区 */
+        .input-area { display: flex; padding: 20px; background: #d7ccc8; gap: 15px; border-top: 3px solid var(--ink); }
+        #user-msg { flex: 1; padding: 15px; border-radius: 10px; border: 2px solid #999; font-size: 1.2em; }
+        #send-btn { background: #8d230f; color: white; padding: 0 40px; font-weight: bold; cursor: pointer; border-radius: 10px; font-size: 1.2em; }
+        #send-btn:disabled { background: #999; }
+
+        #status { font-family: monospace; color: #0f0; font-size: 14px; margin-top: 10px; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div id="config">
+    <div class="row">
+        <strong>第一步：连接</strong>
+        <input type="password" id="api-key" placeholder="填入 API Key (AIzaSy...)">
+        <button id="scan-btn">探测模型</button>
+        <button id="voice-test-btn">第二步：激活男声</button>
+    </div>
+    <div class="row">
+        <span>可用模型：</span>
+        <select id="model-select"><option>请先点击探测...</option></select>
+    </div>
+</div>
+
+<div id="chat-box">
+    <div id="header">
+        <img id="portrait" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Martin_Luther_by_Lucas_Cranach_the_Elder.jpg/440px-Martin_Luther_by_Lucas_Cranach_the_Elder.jpg">
+        <div class="header-info">
+            <h1>马丁·路德</h1>
+            <p>"Hier stehe ich, ich kann nicht anders." (这是我的立场)</p>
+        </div>
+    </div>
+    
+    <div id="display">
+        <div class="bubble luther">愿上帝的恩惠与你同在。请点击上方按钮激活我的声音，然后我们开始探讨真理。</div>
+    </div>
+
+    <div class="input-area">
+        <input type="text" id="user-msg" placeholder="老师，请提问...">
+        <button id="send-btn" disabled>发问</button>
+    </div>
+</div>
+
+<div id="status">系统准备就绪</div>
+
+<script>
+    const display = document.getElementById('display');
+    const userMsg = document.getElementById('user-msg');
+    const sendBtn = document.getElementById('send-btn');
+    const apiKeyInput = document.getElementById('api-key');
+    const modelSelect = document.getElementById('model-select');
+    const scanBtn = document.getElementById('scan-btn');
+    const voiceBtn = document.getElementById('voice-test-btn');
+    const status = document.getElementById('status');
+
+    // 1. 初始化语音系统
+    let synth = window.speechSynthesis;
+    let voices = [];
+
+    function loadVoices() {
+        voices = synth.getVoices();
+    }
+    loadVoices();
+    if (speechSynthesis.onvoiceschanged !== undefined) {
+        speechSynthesis.onvoiceschanged = loadVoices;
+    }
+
+    // 2. 强力男声播放
+    function lutherSpeak(text) {
+        synth.cancel(); // 停止当前所有声音
+        const msg = new SpeechSynthesisUtterance(text);
+        
+        // 查找中文男声
+        const maleVoice = voices.find(v => 
+            v.lang.includes('zh') && 
+            (v.name.includes('Male') || v.name.includes('Man') || v.name.includes('Kangkang') || v.name.includes('Yunxi') || v.name.includes('男'))
+        );
+        
+        if (maleVoice) msg.voice = maleVoice;
+        
+        msg.pitch = 0.4; // 浑厚低音
+        msg.rate = 0.8;  // 庄严语速
+        msg.volume = 1.0;
+        
+        synth.speak(msg);
+    }
+
+    // 语音测试按钮点击（必须有这个交互，浏览器才会放行声音）
+    voiceBtn.onclick = () => {
+        lutherSpeak("我已经准备好在课堂上发言了。如果听到的是低沉男声，请开始下一步。");
+        status.innerText = "✅ 语音通道已唤醒";
+    };
+
+    // 3. 扫描逻辑
+    scanBtn.onclick = async () => {
+        const key = apiKeyInput.value.trim();
+        if(!key) return alert("请先输入 Key！");
+        status.innerText = "⏳ 正在连接 Google 服务器...";
+        try {
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+            const data = await res.json();
+            modelSelect.innerHTML = '';
+            data.models.forEach(m => {
+                if(m.supportedGenerationMethods.includes('generateContent')) {
+                    const opt = document.createElement('option');
+                    opt.value = m.name;
+                    opt.innerText = m.displayName;
+                    modelSelect.appendChild(opt);
+                }
+            });
+            status.innerText = "✅ 模型加载成功。";
+            sendBtn.disabled = false;
+        } catch (e) {
+            status.innerText = "❌ 连线失败：" + e.message;
+        }
+    };
+
+    // 4. 对话逻辑
+    async function chat() {
+        const key = apiKeyInput.value.trim();
+        const msg = userMsg.value.trim();
+        const model = modelSelect.value;
+        if(!key || !msg) return;
+
+        addBubble(msg, 'student');
+        userMsg.value = '';
+        status.innerText = "📡 正在请求路德先生的回答...";
+
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${key}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: `你扮演1521年的马丁路德。语气坚定、神圣、沉稳。用中文简短回答（80字内）：${msg}` }] }]
+                })
+            });
+            const data = await response.json();
+            const reply = data.candidates[0].content.parts[0].text;
+            addBubble(reply, 'luther');
+            lutherSpeak(reply);
+            status.innerText = "✅ 连线稳定";
+        } catch (e) {
+            status.innerText = "❌ 信号波动：" + e.message;
+        }
+    }
+
+    function addBubble(text, role) {
+        const d = document.createElement('div');
+        d.className = `bubble ${role}`;
+        d.innerText = text;
+        display.appendChild(d);
+        display.scrollTop = display.scrollHeight;
+    }
+
+    sendBtn.onclick = chat;
+    userMsg.onkeydown = (e) => { if(e.key === 'Enter') chat(); };
+</script>
+
+</body>
+</html>

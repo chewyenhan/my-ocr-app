@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>沙漠先锋：全班竞赛Q版投影版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+KuaiLe&family=Noto+Sans+SC:wght@400;700&display=swap');
+        
+        body {
+            background: linear-gradient(135deg, #ffedbc 0%, #ff9a8b 100%);
+            font-family: 'Noto Sans SC', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1.5rem;
+        }
+
+        .game-font { font-family: 'ZCOOL KuaiLe', cursive; }
+
+        /* Q版圆润卡片 */
+        .whiteboard-card {
+            background: #ffffff;
+            border: 10px solid #5d4037;
+            border-radius: 40px;
+            box-shadow: 0 30px 0 rgba(93, 64, 55, 0.2);
+            max-width: 1200px;
+            width: 100%;
+            position: relative;
+        }
+
+        /* 选项按钮：更像游戏按钮 */
+        .option-btn {
+            background: #fff9c4;
+            border: 4px solid #5d4037;
+            border-radius: 20px;
+            box-shadow: 0 6px 0 #5d4037;
+            transition: all 0.1s;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .option-btn:hover {
+            transform: translateY(-2px);
+            background: #fff176;
+            box-shadow: 0 8px 0 #5d4037;
+        }
+
+        .option-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #5d4037;
+        }
+
+        .letter-icon {
+            background: #ffa726;
+            color: #ffffff;
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 2rem;
+            margin-right: 1.5rem;
+            flex-shrink: 0;
+            border: 3px solid #5d4037;
+        }
+
+        /* 老师讲解板块 - 特别加强字号 */
+        #teacher-note {
+            display: none;
+            background: #e1f5fe;
+            border: 5px solid #0288d1;
+            border-radius: 30px;
+            box-shadow: 0 10px 0 rgba(2, 136, 209, 0.2);
+        }
+
+        .team-tag {
+            padding: 8px 16px;
+            border-radius: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-bottom: 4px solid rgba(0,0,0,0.1);
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-thumb { background: #5d4037; border-radius: 10px; }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .float-anim { animation: float 3s ease-in-out infinite; }
+    </style>
+</head>
+<body>
+
+    <!-- 顶栏：显示所有小组实时状态 -->
+    <div id="top-status" class="flex flex-wrap justify-center gap-3 mb-6 w-full max-w-6xl hidden">
+        <!-- 动态生成小组状态简表 -->
+    </div>
+
+    <!-- 游戏主容器 -->
+    <div class="whiteboard-card p-8 md:p-12 relative">
+        
+        <!-- 步骤 1: 选择小组数量 -->
+        <div id="step-1" class="text-center">
+            <h1 class="game-font text-7xl mb-12 text-amber-900 drop-shadow-lg">沙漠先锋：全班对决</h1>
+            <p class="text-4xl mb-10 text-gray-700 font-bold">请老师选择参赛小组数量</p>
+            <div class="flex justify-center items-center gap-10 mb-12">
+                <input type="range" id="team-count-range" min="1" max="10" value="3" class="w-80 h-6 bg-amber-200 rounded-lg appearance-none cursor-pointer">
+                <span id="team-count-display" class="text-6xl font-black text-amber-900 bg-white px-6 py-2 rounded-2xl border-4 border-amber-900">3</span>
+                <span class="text-4xl font-bold">组</span>
+            </div>
+            <div class="flex justify-center">
+                <button onclick="setupTeamNames()" class="bg-orange-500 text-white text-4xl px-16 py-6 rounded-3xl hover:bg-orange-400 border-b-8 border-orange-700 transition-all active:border-b-0">下一步：输入组名</button>
+            </div>
+        </div>
+
+        <!-- 步骤 2: 输入每组名称 -->
+        <div id="step-2" class="hidden text-center">
+            <h2 class="game-font text-6xl mb-10 text-amber-900">为各个战队起个酷名字</h2>
+            <div id="team-inputs" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+                <!-- 动态输入框 -->
+            </div>
+            <div class="flex justify-center">
+                <button onclick="initGame()" class="bg-green-500 text-white text-4xl px-20 py-8 rounded-3xl hover:bg-green-400 border-b-8 border-green-700 transition-all active:border-b-0 font-bold">集结完毕，开启征途！</button>
+            </div>
+        </div>
+
+        <!-- 步骤 3: 游戏关卡 -->
+        <div id="game-screen" class="hidden">
+            <div class="flex flex-col md:flex-row gap-12">
+                <!-- 左侧场景信息 -->
+                <div class="w-full md:w-1/3 text-center">
+                    <div id="scene-emoji" class="text-9xl mb-8 bg-amber-50 rounded-3xl p-10 border-4 border-amber-100 float-anim">🏜️</div>
+                    <div id="current-team-indicator" class="p-6 bg-amber-900 text-white rounded-3xl shadow-xl border-b-8 border-black">
+                        <p class="text-xl opacity-80 uppercase tracking-widest font-bold">📢 请准备决策：</p>
+                        <p id="active-team-name" class="text-4xl font-black mt-2 text-yellow-300">---</p>
+                    </div>
+                </div>
+                
+                <!-- 右侧选项 -->
+                <div class="w-full md:w-2/3">
+                    <h2 id="scene-title" class="game-font text-5xl text-amber-900 mb-8 border-l-12 border-orange-500 pl-6">第一关</h2>
+                    <p id="scene-desc" class="text-3xl text-gray-800 leading-snug font-medium mb-10 bg-gray-50 p-6 rounded-2xl border-2 border-gray-200">描述文字</p>
+                    
+                    <div id="options-box" class="grid gap-6">
+                        <!-- 选项按钮 -->
+                    </div>
+
+                    <!-- 小组完成状态进度 -->
+                    <div class="mt-10 flex flex-wrap gap-4 p-4 bg-gray-100 rounded-2xl" id="round-completion-status">
+                        <!-- 显示哪些小组已选 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 老师引导弹窗 (所有人选完才显示) -->
+            <div id="teacher-note" class="mt-12 p-8">
+                <div class="flex items-center mb-6">
+                    <span class="text-6xl mr-6">👨‍🏫</span>
+                    <h4 class="text-4xl font-black text-blue-900">历史知识点（投影重点）：</h4>
+                </div>
+                <!-- 重点放大文字 -->
+                <p id="note-text" class="text-3xl md:text-4xl text-blue-800 leading-relaxed font-bold bg-white p-6 rounded-xl border-2 border-blue-100"></p>
+                <div class="flex justify-center mt-10">
+                    <button id="next-btn" onclick="goToNextScene()" class="bg-blue-600 text-white px-16 py-6 rounded-2xl font-black text-3xl shadow-xl hover:bg-blue-500 transition-all">下一关卡 →</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 步骤 4: 最终排行表 -->
+        <div id="result-screen" class="hidden">
+            <h2 class="game-font text-7xl text-center text-amber-900 mb-12 drop-shadow-xl">🏆 沙漠荣耀排行榜</h2>
+            <div class="overflow-hidden border-8 border-amber-900 rounded-[40px] mb-12 shadow-2xl">
+                <table class="w-full text-left bg-white">
+                    <thead class="bg-amber-900 text-white">
+                        <tr>
+                            <th class="p-8 text-3xl">排名</th>
+                            <th class="p-8 text-3xl">战队名称</th>
+                            <th class="p-8 text-3xl text-center">正确数</th>
+                            <th class="p-8 text-3xl text-center">总分</th>
+                            <th class="p-8 text-3xl">头衔</th>
+                        </tr>
+                    </thead>
+                    <tbody id="result-table-body">
+                        <!-- 结果行 -->
+                    </tbody>
+                </table>
+            </div>
+            <div class="flex justify-center">
+                <button onclick="location.reload()" class="bg-orange-600 text-white px-16 py-6 rounded-3xl text-4xl font-black border-b-8 border-orange-800">重新开赛</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 数据文字部分完全保留原样
+        const scenes = {
+            mecca: {
+                title: "第一关：麦加的抉择",
+                emoji: "🕌",
+                desc: "公元610年左右，穆罕默德在麦加传教。这里是贸易中心，贵族们担心他的教义会破坏生意。面对那些被贵族唾弃的早期信徒（奴隶和穷人），商队该如何表态？",
+                note: "伊斯兰教早期成功的关键在于『社会救济』。分发粮食不仅仅是慷慨，更是实践了教义中人人平等的理念。仅在远处观察或禁止接触都无法获得底层民众的归心。",
+                options: [
+                    { letter: "A", text: "在远处悄悄观察并记录下这些教义", next: "hijrah", inf: 5, uni: 0, isCorrect: false },
+                    { letter: "B", text: "为了不被贵族误会，禁止伙计们与其接触", next: "hijrah", inf: 0, uni: -10, isCorrect: false },
+                    { letter: "C", text: "拿出商队的干粮，分发给那些挨饿的信徒", next: "hijrah", inf: 10, uni: 20, isCorrect: true }
+                ]
+            },
+            hijrah: {
+                title: "第二关：希吉拉大迁徙",
+                emoji: "🌌",
+                desc: "公元622年，麦加教徒面临灭顶之灾。穆罕默德决定迁往麦地那（希吉拉）。商队正准备出发经商，是否愿意冒着被麦加贵族没收财产的风险，秘密帮信徒运送家眷？",
+                note: "公元622年是伊斯兰历的元年。这次迁徙（希吉拉）让教团拥有了根据地。这是生死存亡的抉择，只有无私协助才是符合历史胜利逻辑的答案。",
+                options: [
+                    { letter: "A", text: "全力协助！商队的骆驼优先运送家眷", next: "pillars", inf: 15, uni: 20, isCorrect: true },
+                    { letter: "B", text: "提供帮助，但要求事后获得麦地那的免税权", next: "pillars", inf: 10, uni: 5, isCorrect: false },
+                    { letter: "C", text: "现在形势太乱，商队原地待命，谁也不帮", next: "pillars", inf: -10, uni: -10, isCorrect: false }
+                ]
+            },
+            pillars: {
+                title: "第三关：斋月的考验",
+                emoji: "🌙",
+                desc: "在前往麦地那的沙漠中，正值斋月（Ramadan）。白天滴水不进。商队的非信徒伙计想偷偷喝水，身为领袖，你如何维护教义的严肃性？",
+                note: "『五功』中的斋戒是为了磨练意志。领袖必须以身作则或通过精神激励来维持团结。灵活处理会瓦解宗教初创期的神圣感和纪律性。",
+                options: [
+                    { letter: "A", text: "以身作则，带头守斋并分担伙计的重担", next: "zakat", inf: 10, uni: 20, isCorrect: true },
+                    { letter: "B", text: "宣布『旅行者可以免斋』，让大家喝水", next: "zakat", inf: 0, uni: -5, isCorrect: false },
+                    { letter: "C", text: "组织集体诵读启示，用精神力量克服饥渴", next: "zakat", inf: 5, uni: 10, isCorrect: true }
+                ]
+            },
+            zakat: {
+                title: "第四关：天课的财富",
+                emoji: "💰",
+                desc: "商队今年大获丰收！根据伊斯兰教义，你们需要拿出一部分结余财产（天课 Zakat）捐给社会。你会如何分配这笔钱？",
+                note: "『天课』是伊斯兰教法规定的义务。它不是随意的施舍，而是有比例地专门用于救济穷人、鳏寡孤独。这种制度在历史上起到了调节贫富差距、稳固帝国根基的作用。",
+                options: [
+                    { letter: "A", text: "将钱全部投入建设更华丽的清真寺", next: "hajj", inf: 15, uni: 0, isCorrect: false },
+                    { letter: "B", text: "严格按比例提取，建立基金救助鳏寡孤独", next: "hajj", inf: 10, uni: 20, isCorrect: true },
+                    { letter: "C", text: "给商队所有伙计发奖金，提高大家收入", next: "hajj", inf: 5, uni: 10, isCorrect: false }
+                ]
+            },
+            hajj: {
+                title: "第五关：克尔白的转折",
+                emoji: "🕋",
+                desc: "公元630年，穆罕默德率军重返麦加。他走入克尔白神庙，里面摆满了各部落信奉的360个偶像。作为随行商队，你认为如何处理最符合『一神教』教义？",
+                note: "穆罕默德进入麦加后清除了一切偶像，确立了对真主的唯一崇拜。这标志着阿拉伯半岛从多神教部落社会向统一的伊斯兰文明转变。彻底清除偶像才是历史的答案。",
+                options: [
+                    { letter: "A", text: "保留偶像，尊重各部落的传统信仰以求和平", next: "final", inf: 0, uni: -10, isCorrect: false },
+                    { letter: "B", text: "只保留最强大的偶像，将其余的移出神庙", next: "final", inf: 5, uni: 0, isCorrect: false },
+                    { letter: "C", text: "彻底清除所有偶像，宣布只崇拜唯一的真主", next: "final", inf: 15, uni: 20, isCorrect: true }
+                ]
+            }
+        };
+
+        let teams = [];
+        let currentTeamIdx = 0;
+        let currentSceneKey = 'mecca';
+        let sceneOrder = ['mecca', 'hijrah', 'pillars', 'zakat', 'hajj'];
+        let sceneIdx = 0;
+
+        document.getElementById('team-count-range').oninput = function() {
+            document.getElementById('team-count-display').innerText = this.value;
+        };
+
+        function setupTeamNames() {
+            const count = parseInt(document.getElementById('team-count-range').value);
+            const container = document.getElementById('team-inputs');
+            container.innerHTML = '';
+            for(let i=1; i<=count; i++) {
+                container.innerHTML += `
+                    <div class="flex items-center bg-white p-4 rounded-3xl border-4 border-amber-200 shadow-sm">
+                        <span class="mr-4 font-black text-2xl text-amber-900">#${i}:</span>
+                        <input type="text" id="team-name-${i}" placeholder="输入组名..." class="p-3 text-2xl flex-grow rounded-xl border-2 border-amber-100 outline-none focus:border-orange-400">
+                    </div>
+                `;
+            }
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.remove('hidden');
+        }
+
+        function initGame() {
+            const count = parseInt(document.getElementById('team-count-range').value);
+            teams = [];
+            for(let i=1; i<=count; i++) {
+                const name = document.getElementById(`team-name-${i}`).value || `战队 ${i}`;
+                teams.push({
+                    name: name,
+                    score: 0,
+                    influence: 50,
+                    unity: 50,
+                    hasAnsweredCurrent: false
+                });
+            }
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('top-status').classList.remove('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            renderTopStatus();
+            loadScene('mecca');
+        }
+
+        function loadScene(key) {
+            currentSceneKey = key;
+            const s = scenes[key];
+            document.getElementById('scene-title').innerText = s.title;
+            document.getElementById('scene-emoji').innerText = s.emoji;
+            document.getElementById('scene-desc').innerText = s.desc;
+            document.getElementById('teacher-note').style.display = 'none';
+            
+            teams.forEach(t => t.hasAnsweredCurrent = false);
+            currentTeamIdx = 0;
+            
+            updateRoundUI();
+            renderOptions();
+        }
+
+        function renderOptions() {
+            const box = document.getElementById('options-box');
+            const s = scenes[currentSceneKey];
+            box.innerHTML = '';
+            s.options.forEach((opt, idx) => {
+                const b = document.createElement('button');
+                b.className = "option-btn w-full p-8 text-3xl text-left font-black";
+                b.innerHTML = `<div class="letter-icon">${opt.letter}</div> <span>${opt.text}</span>`;
+                b.onclick = () => selectOption(opt);
+                box.appendChild(b);
+            });
+        }
+
+        function selectOption(opt) {
+            const team = teams[currentTeamIdx];
+            team.influence += opt.inf;
+            team.unity += opt.uni;
+            if(opt.isCorrect) team.score += 1;
+            team.hasAnsweredCurrent = true;
+
+            if(currentTeamIdx < teams.length - 1) {
+                currentTeamIdx++;
+                updateRoundUI();
+            } else {
+                showTeacherNote();
+            }
+        }
+
+        function updateRoundUI() {
+            const activeTeam = teams[currentTeamIdx];
+            document.getElementById('active-team-name').innerText = activeTeam.name;
+            
+            const statusBox = document.getElementById('round-completion-status');
+            statusBox.innerHTML = teams.map((t, i) => `
+                <div class="team-tag ${t.hasAnsweredCurrent ? 'bg-green-500 text-white shadow-inner' : (i === currentTeamIdx ? 'bg-orange-400 text-white border-4 border-amber-900 ring-4 ring-orange-200' : 'bg-white text-gray-400 border-2 border-gray-200')}">
+                    ${t.name} ${t.hasAnsweredCurrent ? '✓' : ''}
+                </div>
+            `).join('');
+            
+            renderTopStatus();
+        }
+
+        function renderTopStatus() {
+            const top = document.getElementById('top-status');
+            top.innerHTML = teams.map(t => `
+                <div class="bg-amber-900 text-white px-6 py-2 rounded-2xl text-xl font-bold shadow-md">
+                    ${t.name}: ⭐${t.score}
+                </div>
+            `).join('');
+        }
+
+        function showTeacherNote() {
+            document.getElementById('options-box').innerHTML = `
+                <div class="p-12 bg-green-100 border-8 border-green-500 rounded-3xl text-center">
+                    <p class="text-5xl font-black text-green-800 mb-4">🎉 全部小组决策完毕！</p>
+                    <p class="text-3xl text-green-600 font-bold">请全班看屏幕，听老师总结历史真相</p>
+                </div>
+            `;
+            document.getElementById('note-text').innerText = scenes[currentSceneKey].note;
+            document.getElementById('teacher-note').style.display = 'block';
+            document.getElementById('teacher-note').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function goToNextScene() {
+            sceneIdx++;
+            if(sceneIdx < sceneOrder.length) {
+                loadScene(sceneOrder[sceneIdx]);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                showFinalRankings();
+            }
+        }
+
+        function showFinalRankings() {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('top-status').classList.add('hidden');
+            document.getElementById('result-screen').classList.remove('hidden');
+
+            const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
+            const tbody = document.getElementById('result-table-body');
+            tbody.innerHTML = '';
+
+            sortedTeams.forEach((t, i) => {
+                let rankName = "";
+                let color = "";
+                if(t.score === 5) { rankName = "哈里发级·传奇"; color = "text-yellow-600"; }
+                else if(t.score >= 4) { rankName = "大帝国·先锋"; color = "text-green-600"; }
+                else if(t.score >= 3) { rankName = "绿洲·勇士"; color = "text-blue-600"; }
+                else { rankName = "沙漠·幸存者"; color = "text-gray-400"; }
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-amber-50 transition-colors">
+                        <td class="p-8 text-5xl font-black text-amber-900">#${i+1}</td>
+                        <td class="p-8 text-3xl font-bold">${t.name}</td>
+                        <td class="p-8 text-4xl text-center font-black">${t.score}</td>
+                        <td class="p-8 text-center">
+                            <span class="bg-amber-100 text-amber-900 px-6 py-2 rounded-2xl text-3xl font-black border-4 border-amber-900">⭐ ${t.score}</span>
+                        </td>
+                        <td class="p-8 text-3xl font-black ${color}">${rankName}</td>
+                    </tr>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>

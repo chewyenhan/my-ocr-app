@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>古印度文明 - 语音自修复增强版</title>
+    <link href="https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root { --primary: #D35400; --secondary: #2C3E50; --accent: #F1C40F; --bg: #FDF2E9; }
+        body { margin: 0; padding: 20px; font-family: 'Noto Sans SC', sans-serif; background-color: #5D6D7E; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        
+        #setup-panel { 
+            width: 900px; max-width: 95vw; background: white; padding: 25px; 
+            border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border-left: 8px solid #3498db;
+        }
+
+        .input-group { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; align-items: center; }
+        input, select { padding: 12px; border: 2px solid #ddd; border-radius: 8px; font-size: 14px; flex-grow: 1; }
+        
+        .btn-check { background: #3498db; color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        .slide-card { 
+            width: 900px; max-width: 95vw; background: var(--bg); border-radius: 20px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 6px solid var(--primary); 
+            overflow: hidden; margin-bottom: 20px;
+        }
+
+        .header { background: var(--primary); color: white; padding: 15px; text-align: center; font-family: 'ZCOOL+XiaoWei', serif; font-size: 1.8em; }
+        .content { display: grid; grid-template-columns: 1fr 1fr; padding: 25px; gap: 25px; align-items: start; }
+        .visual-area img { width: 100%; height: 320px; object-fit: cover; border-radius: 12px; border: 3px solid #e5e7e9; background: #ccc; }
+        
+        .interaction-area { background: white; padding: 20px; border-radius: 15px; border: 2px dashed var(--primary); min-height: 320px; display: flex; flex-direction: column; gap: 10px; }
+        
+        button.action-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #95a5a6; cursor: not-allowed; }
+
+        .result-box { flex-grow: 1; background: #f8f9f9; padding: 15px; border-radius: 8px; border-left: 4px solid var(--accent); font-size: 15px; overflow-y: auto; max-height: 150px; }
+        .status-info { font-size: 13px; color: #e67e22; text-align: center; min-height: 1.5em; font-weight: bold; }
+        .audio-wave { display: inline-block; margin-left: 5px; color: #3498db; animation: blink 1s infinite; }
+        @keyframes blink { 0% { opacity: 0; } 50% { opacity: 1; } 100% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div id="setup-panel">
+        <h3 style="margin:0"><i class="fas fa-tools"></i> 教学系统配置 (API 获取)</h3>
+        <div class="input-group">
+            <input type="password" id="api-key" placeholder="在此粘贴您的 Gemini API Key">
+            <button class="btn-check" onclick="fetchModels()">获取可用模型</button>
+        </div>
+
+        <div class="input-group" id="model-selection-area" style="display:none;">
+            <label>选择模型：</label>
+            <select id="model-list" onchange="testVoiceSupport()"></select>
+            <button onclick="testVoiceSupport()" class="btn-check" style="background:#27ae60">测试语音</button>
+        </div>
+        <div id="setup-msg" style="margin-top:10px; font-size:13px;"></div>
+    </div>
+
+    <!-- 种姓模块 -->
+    <div class="slide-card">
+        <div class="header">古印度种姓模拟器</div>
+        <div class="content">
+            <div class="visual-area">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Castes.jpg/640px-Castes.jpg" alt="古印度社会">
+            </div>
+            <div class="interaction-area">
+                <p>点击按钮，随机生成你的古代种姓身份：</p>
+                <button class="action-btn" id="btn-caste" onclick="doCaste()">✨ 开启转世人生</button>
+                <div class="result-box" id="res-caste">等待抽取身份...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 阿育王模块 -->
+    <div class="slide-card">
+        <div class="header">与阿育王跨时空对话</div>
+        <div class="content">
+            <div class="visual-area">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Ashoka_the_Great_Ashokan_pillar_at_Vaishali.jpg/640px-Ashoka_the_Great_Ashokan_pillar_at_Vaishali.jpg" alt="阿育王雕像">
+            </div>
+            <div class="interaction-area">
+                <p>请输入你的问题，大王将以威严之声回答：</p>
+                <input type="text" id="input-king" placeholder="例如：大王，您为何要在石柱上刻字？">
+                <button class="action-btn" id="btn-king" onclick="doKing()">提问并聆听圣旨</button>
+                <div id="status-king" class="status-info"></div>
+                <div class="result-box" id="res-king">阿育王正在听取你的进言...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentKey = "";
+        
+        async function fetchModels() {
+            const key = document.getElementById('api-key').value.trim();
+            const msg = document.getElementById('setup-msg');
+            const area = document.getElementById('model-selection-area');
+            const select = document.getElementById('model-list');
+
+            if (!key) { alert("请输入 Key"); return; }
+            msg.innerText = "正在查询您的 API 权限...";
+            msg.style.color = "#3498db";
+
+            try {
+                const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                const data = await resp.json();
+                if (data.error) throw new Error(data.error.message);
+
+                const models = data.models.filter(m => m.supportedGenerationMethods.includes("generateContent"));
+                select.innerHTML = "";
+                models.forEach(m => {
+                    const shortName = m.name.split('/').pop();
+                    const opt = document.createElement('option');
+                    opt.value = shortName;
+                    opt.text = shortName;
+                    if (shortName === "gemini-1.5-flash") opt.selected = true;
+                    select.appendChild(opt);
+                });
+
+                currentKey = key;
+                area.style.display = 'flex';
+                msg.innerText = "获取成功！若语音不响，请尝试切换模型并点击【测试语音】。";
+                msg.style.color = "green";
+            } catch (e) {
+                msg.innerText = "获取失败：" + e.message;
+                msg.style.color = "#e74c3c";
+            }
+        }
+
+        async function testVoiceSupport() {
+            if (!currentKey) return;
+            const status = document.getElementById('setup-msg');
+            status.innerText = "正在尝试生成测试语音...";
+            try {
+                await generateAudio("这是一次语音测试，听到声音说明配置成功。");
+                status.innerText = "语音测试成功！";
+                status.style.color = "green";
+            } catch (e) {
+                status.innerText = "当前模型可能不支持语音，请尝试换一个模型再测试。";
+                status.style.color = "orange";
+            }
+        }
+
+        async function callAI(prompt) {
+            const model = document.getElementById('model-list').value;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            });
+            const data = await resp.json();
+            if (data.error) throw new Error(data.error.message);
+            return data.candidates[0].content.parts[0].text;
+        }
+
+        async function generateAudio(text) {
+            // 语音生成优先尝试使用 gemini-2.0-flash-preview-tts，如果不行则使用当前选中的模型
+            const model = "gemini-2.5-flash-preview-tts"; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${currentKey}`;
+            
+            const resp = await fetch(url, {
+                method: 'POST',
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: "以威严沉稳的男声朗读：" + text }] }],
+                    generationConfig: { 
+                        responseModalities: ["AUDIO"], 
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Charon" } } } 
+                    }
+                })
+            });
+            
+            const data = await resp.json();
+            if (data.candidates && data.candidates[0].content.parts[0].inlineData) {
+                playAudio(data.candidates[0].content.parts[0].inlineData.data);
+            } else {
+                throw new Error("模型不支持语音");
+            }
+        }
+
+        async function doCaste() {
+            const res = document.getElementById('res-caste');
+            res.innerText = "正在翻阅生死簿...";
+            try {
+                const text = await callAI("随机生成一个古印度人的身份：姓名、种姓、职业、社会地位。描述其生活现状（60字内）。");
+                res.innerHTML = text.replace(/\n/g, '<br>');
+            } catch (e) { res.innerText = "错误：" + e.message; }
+        }
+
+        async function doKing() {
+            const input = document.getElementById('input-king').value;
+            if (!input) return;
+            const res = document.getElementById('res-king');
+            const status = document.getElementById('status-king');
+            
+            status.innerHTML = '正在聆听您的进言 <i class="fas fa-spinner fa-spin"></i>';
+            try {
+                const answer = await callAI(`你是古印度阿育王，回答提问：“${input}”。语气威严、仁慈且深沉，不要超过60个字。`);
+                res.innerText = answer;
+                
+                status.innerHTML = '大王圣旨降下 <span class="audio-wave">●▆▄▃▂</span>';
+                await generateAudio(answer);
+            } catch (e) { 
+                res.innerText = "阿育王摆了摆手：" + e.message;
+            }
+            setTimeout(() => { status.innerHTML = ""; }, 5000);
+        }
+
+        function playAudio(base64) {
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const blob = new Blob([getWavHeader(binary.length, 24000), bytes], { type: 'audio/wav' });
+            const audio = new Audio(URL.createObjectURL(blob));
+            audio.play().catch(e => {
+                console.error("播放失败，请检查浏览器是否允许自动播放", e);
+                document.getElementById('status-king').innerText = "提示：请点击页面任意处以激活语音权限";
+            });
+        }
+
+        function getWavHeader(len, rate) {
+            const b = new ArrayBuffer(44); const v = new DataView(b);
+            const s = (v, o, s) => { for (let i=0; i<s.length; i++) v.setUint8(o+i, s.charCodeAt(i)); };
+            s(v, 0, 'RIFF'); v.setUint32(4, 36+len, true); s(v, 8, 'WAVE'); s(v, 12, 'fmt ');
+            v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+            v.setUint32(24, rate, true); v.setUint32(28, rate*2, true); v.setUint16(32, 2, true);
+            v.setUint16(34, 16, true); s(v, 36, 'data'); v.setUint32(40, len, true);
+            return b;
+        }
+    </script>
+</body>
+</html>

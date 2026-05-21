@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>初一历史：大航海捉谎行动 v6.1 逻辑增强版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=ZCOOL+XiaoWei&display=swap');
+        
+        body {
+            background: radial-gradient(circle at center, #1e293b 0%, #0f172a 100%);
+            font-family: 'sans-serif';
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .chat-scroll::-webkit-scrollbar { width: 6px; }
+        .chat-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.3); border-radius: 10px; }
+
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.6); }
+            70% { box-shadow: 0 0 0 20px rgba(251, 191, 36, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+        }
+        .challenge-btn { animation: pulse-gold 2s infinite; }
+        
+        .danmu-container {
+            position: absolute;
+            top: 12%;
+            left: 0;
+            width: 100%;
+            height: 25%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 40;
+        }
+        @keyframes danmu-move {
+            from { transform: translateX(100vw); }
+            to { transform: translateX(-100%); }
+        }
+        .danmu {
+            position: absolute;
+            white-space: nowrap;
+            color: white;
+            font-size: 1.5rem;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            animation: danmu-move 8s linear infinite;
+            padding: 10px 20px;
+            border-radius: 30px;
+        }
+        .danmu-fail { background: rgba(239, 68, 68, 0.6); border: 2px solid #ef4444; }
+        .danmu-success { background: rgba(34, 197, 94, 0.6); border: 2px solid #22c55e; }
+        
+        .role-active {
+            background: #2563eb !important;
+            box-shadow: 0 0 20px rgba(37, 99, 235, 0.5);
+            transform: scale(1.05);
+        }
+
+        .team-active {
+            background: #eab308 !important;
+            color: #0f172a !important;
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(234, 179, 8, 0.4);
+        }
+
+        #finalResultScreen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(15, 23, 42, 0.98);
+            backdrop-filter: blur(20px);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center p-6">
+
+    <!-- Step 1: Team Setup Screen -->
+    <div id="setupScreen" class="fixed inset-0 z-[100] bg-slate-950 flex items-center justify-center p-6">
+        <div class="glass-panel max-w-2xl w-full p-10 flex flex-col items-center">
+            <h1 class="text-white text-4xl font-black mb-8">🚢 战队组建阶段</h1>
+            
+            <div class="w-full space-y-6">
+                <div class="flex items-center justify-between">
+                    <span class="text-blue-300 text-xl font-bold">选择参赛战队数：</span>
+                    <select id="teamCountSelect" onchange="generateTeamInputs()" class="bg-slate-800 text-white text-xl p-3 rounded-xl border border-white/20">
+                        <option value="1">1 支战队</option>
+                        <option value="2">2 支战队</option>
+                        <option value="3">3 支战队</option>
+                        <option value="4" selected>4 支战队</option>
+                        <option value="5">5 支战队</option>
+                        <option value="6">6 支战队</option>
+                        <option value="7">7 支战队</option>
+                        <option value="8">8 支战队</option>
+                        <option value="9">9 支战队</option>
+                        <option value="10">10 支战队</option>
+                    </select>
+                </div>
+
+                <div id="teamNameContainer" class="grid grid-cols-2 gap-4 max-h-64 overflow-y-auto pr-2"></div>
+
+                <div class="pt-6">
+                    <button onclick="startGame()" class="w-full bg-blue-600 hover:bg-blue-500 text-white text-2xl font-black py-4 rounded-2xl shadow-xl transition-all active:scale-95">
+                        启航：进入直播间
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Final Result Screen -->
+    <div id="finalResultScreen" class="flex-col items-center justify-center p-10">
+        <h2 class="text-yellow-500 text-6xl font-black mb-12 animate-bounce">🏆 航海荣耀榜 🏆</h2>
+        <div id="finalTeamList" class="w-full max-w-4xl space-y-6">
+            <!-- Sorted list items -->
+        </div>
+        <button onclick="location.reload()" class="mt-16 bg-white/10 hover:bg-white/20 text-white px-10 py-4 rounded-2xl text-xl font-bold transition-all">
+            重新开始一局
+        </button>
+    </div>
+
+    <!-- API Settings Bar -->
+    <div class="w-full max-w-7xl mb-6 glass-panel p-4 flex flex-wrap items-center justify-between gap-4 z-50">
+        <div class="flex items-center space-x-4 flex-1 min-w-[400px]">
+            <span class="text-white text-lg font-bold whitespace-nowrap">🔑 API KEY:</span>
+            <input id="apiKeyInput" type="password" placeholder="粘贴 API Key" class="bg-black/50 border-2 border-white/20 rounded-xl px-4 py-2 text-lg text-white flex-1 outline-none focus:border-blue-500">
+            <button onclick="checkModels()" class="bg-blue-600 hover:bg-blue-500 text-white text-lg px-6 py-2 rounded-xl font-bold transition-all active:scale-95">检测模型</button>
+        </div>
+        <div class="flex items-center space-x-3">
+            <span class="text-white text-lg font-bold">🤖 模型:</span>
+            <select id="modelSelect" class="bg-slate-800 border-2 border-white/20 rounded-xl px-4 py-2 text-lg text-white outline-none">
+                <option value="">请先检测</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="danmuLayer" class="danmu-container"></div>
+
+    <!-- Main Container -->
+    <div class="max-w-7xl w-full h-[75vh] flex flex-col glass-panel shadow-2xl overflow-hidden relative">
+        
+        <div class="w-full bg-black/40 p-3 border-b-2 border-white/10 flex items-center justify-center space-x-3 overflow-x-auto">
+            <span class="text-yellow-500 font-black text-lg mr-2">操作战队:</span>
+            <div id="teamTabContainer" class="flex space-x-2"></div>
+        </div>
+
+        <div class="absolute top-32 right-8 z-20 flex flex-col items-end space-y-4">
+            <div id="scoreContainer" class="bg-yellow-500/30 border-2 border-yellow-500 px-6 py-2 rounded-full text-yellow-400 text-2xl font-black shadow-lg transition-all duration-300">
+                ✨ <span id="activeTeamNameDisplay">战队</span>: <span id="score">0</span>
+            </div>
+            <div id="medals" class="flex space-x-2"></div>
+        </div>
+
+        <div class="p-6 bg-white/5 border-b-2 border-white/10 flex justify-between items-center">
+            <div class="flex items-center space-x-5">
+                <div class="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-3xl shadow-xl border-2 border-white/20">⚓</div>
+                <div>
+                    <h1 class="text-white font-black text-3xl">大航海捉谎行动 <span class="text-blue-400">CLASS</span></h1>
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button id="btn-diaz" onclick="switchRole('diaz')" class="role-btn px-4 py-2 rounded-xl bg-slate-800 text-white text-lg font-bold hover:bg-slate-700 transition-all">迪亚士</button>
+                <button id="btn-dagama" onclick="switchRole('dagama')" class="role-btn px-4 py-2 rounded-xl bg-slate-800 text-white text-lg font-bold hover:bg-slate-700 transition-all">达·伽马</button>
+                <button id="btn-columbus" onclick="switchRole('columbus')" class="role-btn role-active px-4 py-2 rounded-xl text-white text-lg font-bold">哥伦布</button>
+                <button id="btn-magellan" onclick="switchRole('magellan')" class="role-btn px-4 py-2 rounded-xl bg-slate-800 text-white text-lg font-bold hover:bg-slate-700 transition-all">麦哲伦</button>
+            </div>
+        </div>
+
+        <div class="flex-1 flex overflow-hidden">
+            <!-- Sidebar -->
+            <div class="hidden lg:flex flex-[0.3] bg-black/30 p-8 flex-col items-center border-r-2 border-white/10">
+                <div id="avatarFrame" class="w-48 h-48 rounded-full border-4 border-blue-500/50 p-2 mb-6 relative">
+                    <div class="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-8xl shadow-inner">
+                        <span id="roleEmoji">🧭</span>
+                    </div>
+                </div>
+                <div class="text-center w-full">
+                    <h2 id="roleName" class="text-white text-3xl font-black mb-2">哥伦布</h2>
+                    <p id="roleStatus" class="text-blue-300 text-lg mb-6 italic font-medium">“前往印度的航程”</p>
+                    <div class="bg-blue-600/10 border border-blue-500/30 p-4 rounded-xl text-left text-blue-100 text-lg">
+                        成功 <span class="text-green-400 font-bold">+2</span> / 失败 <span class="text-red-400 font-bold">-1</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="flex-1 flex flex-col relative bg-slate-900/20">
+                <div id="chatBox" class="flex-1 p-8 overflow-y-auto chat-scroll flex flex-col space-y-6"></div>
+
+                <div id="challengeModal" class="hidden absolute inset-0 bg-black/80 z-40 flex items-center justify-center p-10">
+                    <div class="bg-slate-800 border-4 border-yellow-500/50 p-8 rounded-3xl w-full max-w-xl">
+                        <h3 id="modalTitle" class="text-yellow-500 text-2xl font-black mb-6">提出质疑！</h3>
+                        <textarea id="challengeReason" placeholder="请指出哪里不对？" class="w-full bg-black/60 border border-white/10 rounded-2xl p-4 text-xl text-white h-32 mb-6 outline-none"></textarea>
+                        <div class="flex space-x-4">
+                            <button onclick="submitChallenge()" class="flex-1 bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-black py-3 rounded-xl text-xl">提交</button>
+                            <button onclick="closeModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-bold py-3 rounded-xl text-xl">取消</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="judgeBox" class="hidden absolute top-0 left-0 w-full p-6 z-50">
+                    <div id="judgeTheme" class="bg-yellow-500 text-gray-900 p-6 rounded-2xl shadow-3xl flex items-start space-x-5 border-4 border-white">
+                        <span id="judgeIcon" class="text-5xl">🧐</span>
+                        <div class="flex-1"><div id="judgeResult" class="text-xl font-bold"></div></div>
+                        <button onclick="closeJudge()" class="text-gray-900 font-black text-2xl">✕</button>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-black/40 border-t-2 border-white/10">
+                    <div class="flex items-center space-x-4">
+                        <input id="userInput" type="text" placeholder="作为当前战队发言..." class="flex-1 bg-slate-900 border-2 border-white/20 rounded-xl px-6 py-4 text-2xl text-white outline-none focus:border-blue-500">
+                        <button onclick="sendMessage()" class="bg-blue-600 hover:bg-blue-500 text-white font-black px-8 py-4 rounded-xl text-2xl transition-all">提问</button>
+                        <button onclick="openChallengeModal()" id="challengeBtn" class="challenge-btn bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-black px-8 py-4 rounded-xl text-2xl transition-all">质疑！</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Buttons -->
+    <div class="w-full max-w-7xl mt-4 flex justify-end">
+        <button onclick="showFinalResults()" class="bg-red-600 hover:bg-red-500 text-white px-8 py-3 rounded-xl text-xl font-black shadow-lg transition-all active:scale-95">
+            🏁 结束游戏 & 总结战队分数
+        </button>
+    </div>
+
+    <script>
+        // --- 音效引擎 (Web Audio API) ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playTone(freq, type, duration) {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain); gain.connect(audioCtx.destination);
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.start(); osc.stop(audioCtx.currentTime + duration);
+        }
+        function soundClick() { playTone(600, 'sine', 0.1); }
+        function soundSuccess() { playTone(523.25, 'triangle', 0.1); setTimeout(()=>playTone(659.25, 'triangle', 0.1), 100); setTimeout(()=>playTone(783.99, 'triangle', 0.3), 200); }
+        function soundFail() { playTone(200, 'sawtooth', 0.3); }
+        function soundStart() { playTone(300, 'square', 0.2); setTimeout(()=>playTone(400, 'square', 0.4), 200); }
+
+        // --- 核心逻辑 ---
+        let currentRole = 'columbus';
+        let teams = [];
+        let activeTeamIndex = 0;
+        let lastAiMessage = "";
+        let isGenerating = false;
+
+        const roles = {
+            diaz: { 
+                name: "巴托洛梅乌·迪亚士", 
+                emoji: "⛈️", 
+                status: "“绕过风暴角”", 
+                prompt: "你现在是1488年的迪亚士。你是受葡萄牙王室派遣的。记住你没到过印度，只到了非洲南端。必须始终使用中文交流，即便对方说英文，你也用中文回复。如果你提到美洲、土豆或任何1488年之后的事实，你就输了。" 
+            },
+            dagama: { 
+                name: "瓦斯科·达·伽马", 
+                emoji: "🌶️", 
+                status: "“抵达加里库特”", 
+                prompt: "你现在是1498年的达·伽马。你是葡萄牙人，受葡萄牙国王派遣。你极端鄙视西班牙的航海计划。你已经到了印度。必须始终使用中文交流。如果你说你是西班牙派出来的，或者提到美洲发现，你就说谎了。" 
+            },
+            columbus: { 
+                name: "克里斯托弗·哥伦布", 
+                emoji: "🧭", 
+                status: "“寻找东方航线”", 
+                prompt: "你现在是1492年的哥伦布。你受西班牙王室（伊莎贝拉女王）派遣。你坚信自己已经到了印度。你不知道美洲的存在。必须始终使用中文交流。任何提到美洲或非亚洲事物的词都会被你反驳。" 
+            },
+            magellan: { 
+                name: "费迪南德·麦哲伦", 
+                emoji: "🌏", 
+                status: "“横渡太平大洋”", 
+                prompt: "你现在是1520年的麦哲伦。你虽然是葡萄牙人，但你是受西班牙王室派遣进行的环球航行。你现在正在横渡太平洋。必须始终使用中文交流。你不知道自己能不能活到最后。" 
+            }
+        };
+
+        function generateTeamInputs() {
+            const count = parseInt(document.getElementById('teamCountSelect').value);
+            const container = document.getElementById('teamNameContainer');
+            container.innerHTML = '';
+            for (let i = 1; i <= count; i++) {
+                container.innerHTML += `
+                    <div class="space-y-1">
+                        <label class="text-blue-200 text-sm font-bold">战队 ${i}</label>
+                        <input type="text" id="teamName-${i}" value="战队 ${i}" class="w-full bg-white/5 border border-white/20 rounded-lg p-2 text-white outline-none">
+                    </div>`;
+            }
+        }
+        generateTeamInputs();
+
+        function startGame() {
+            soundStart();
+            const count = parseInt(document.getElementById('teamCountSelect').value);
+            teams = [];
+            for (let i = 1; i <= count; i++) {
+                teams.push({ name: document.getElementById(`teamName-${i}`).value || `战队 ${i}`, score: 0, medals: 0 });
+            }
+            renderTeamTabs();
+            setActiveTeam(0);
+            document.getElementById('setupScreen').style.display = 'none';
+        }
+
+        function renderTeamTabs() {
+            const container = document.getElementById('teamTabContainer');
+            container.innerHTML = teams.map((team, index) => `
+                <button onclick="setActiveTeam(${index})" id="team-tab-${index}" class="px-6 py-2 rounded-xl bg-slate-800 text-white font-bold transition-all">
+                    ${team.name}
+                </button>`).join('');
+        }
+
+        function setActiveTeam(index) {
+            soundClick();
+            activeTeamIndex = index;
+            document.querySelectorAll('[id^="team-tab-"]').forEach(btn => btn.classList.remove('team-active'));
+            document.getElementById(`team-tab-${index}`).classList.add('team-active');
+            updateScoreUI();
+        }
+
+        function updateScoreUI() {
+            const team = teams[activeTeamIndex];
+            document.getElementById('score').innerText = team.score;
+            document.getElementById('activeTeamNameDisplay').innerText = team.name;
+            document.getElementById('medals').innerHTML = '🏅'.repeat(team.medals);
+        }
+
+        async function checkModels() {
+            soundClick();
+            const key = document.getElementById('apiKeyInput').value.trim();
+            if (!key) return;
+            localStorage.setItem('gemini_api_key', key);
+            const select = document.getElementById('modelSelect');
+            select.innerHTML = '<option>检测中...</option>';
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
+                const data = await res.json();
+                if (data.models) {
+                    const chatModels = data.models.filter(m => m.supportedGenerationMethods.includes('generateContent'));
+                    select.innerHTML = chatModels.map(m => `<option value="${m.name}">${m.displayName}</option>`).join('');
+                    addDanmu("✅ 链路连接成功", "success");
+                }
+            } catch (e) {
+                select.innerHTML = '<option value="gemini-2.0-flash">gemini-2.0-flash</option>';
+            }
+        }
+
+        async function apiCall(prompt, sys) {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            const model = document.getElementById('modelSelect').value;
+            if (!key || !model) return null;
+            try {
+                const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/${model}:generateContent?key=${key}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        systemInstruction: { parts: [{ text: sys }] }
+                    })
+                });
+                const data = await res.json();
+                return data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            } catch (e) { return null; }
+        }
+
+        async function sendMessage() {
+            soundClick();
+            const input = document.getElementById('userInput');
+            if (!input.value.trim() || isGenerating) return;
+            const text = input.value; input.value = '';
+            addMessage('user', `[${teams[activeTeamIndex].name}] ${text}`);
+            isGenerating = true;
+            // 额外强调中文回复
+            const res = await apiCall(text + " (请务必用中文回答我)", roles[currentRole].prompt);
+            if (res) addMessage('ai', res);
+            isGenerating = false;
+        }
+
+        function addMessage(role, text) {
+            const box = document.getElementById('chatBox');
+            const div = document.createElement('div');
+            const isUser = role === 'user';
+            div.className = `max-w-[85%] p-5 rounded-2xl text-2xl shadow-lg ${isUser ? 'bg-blue-700 text-white self-end' : 'bg-slate-800 text-white self-start'}`;
+            div.innerHTML = text.replace(/\*\*(.*?)\*\*/g, '<strong class="text-yellow-400">$1</strong>');
+            box.appendChild(div); box.scrollTop = box.scrollHeight;
+            if(role === 'ai') lastAiMessage = text;
+        }
+
+        function openChallengeModal() { soundClick(); document.getElementById('challengeModal').classList.remove('hidden'); }
+        function closeModal() { document.getElementById('challengeModal').classList.add('hidden'); }
+
+        async function submitChallenge() {
+            const reason = document.getElementById('challengeReason').value;
+            if (!reason) return;
+            closeModal();
+            document.getElementById('judgeBox').classList.remove('hidden');
+            document.getElementById('judgeResult').innerText = "裁判正在核查史料...";
+            
+            // 强化法官提示词，确保其严谨性
+            const judgeSystem = `你是一位极其严谨的初一历史专家。你的任务是核查质疑是否成立。
+            规则：
+            1. 只有当质疑点完全符合真实历史，且航海家的言论确实存在错误时，才判定【质疑成功】。
+            2. 如果学生的质疑本身是错误的（比如错误地认为达伽马是西班牙派出的，而历史事实他是葡萄牙派出的），你必须坚定判定【质疑失败】。
+            3. 输出格式：开头必须是【质疑成功】或【质疑失败】，然后给出简短的历史真相解析。`;
+
+            const res = await apiCall(`航海家说：\"${lastAiMessage}\"。学生质疑：\"${reason}\"。请裁判判定。`, judgeSystem);
+            if (res) {
+                document.getElementById('judgeResult').innerText = res;
+                if (res.includes("成功")) {
+                    soundSuccess();
+                    teams[activeTeamIndex].score += 2;
+                    teams[activeTeamIndex].medals += 1;
+                    addDanmu(`🔥 ${teams[activeTeamIndex].name} 成功质疑！`, "success");
+                } else {
+                    soundFail();
+                    teams[activeTeamIndex].score = Math.max(0, teams[activeTeamIndex].score - 1);
+                    addDanmu(`🧐 ${teams[activeTeamIndex].name} 证据不足/质疑有误`, "fail");
+                }
+                updateScoreUI();
+            }
+        }
+
+        function showFinalResults() {
+            soundStart();
+            const screen = document.getElementById('finalResultScreen');
+            const list = document.getElementById('finalTeamList');
+            screen.style.display = 'flex';
+            
+            const sortedTeams = [...teams].sort((a, b) => b.score - a.score);
+            list.innerHTML = sortedTeams.map((t, i) => `
+                <div class="flex items-center justify-between bg-white/10 p-6 rounded-2xl border-2 ${i===0?'border-yellow-500':'border-white/10'}">
+                    <div class="flex items-center space-x-6">
+                        <span class="text-4xl font-black text-white">${i === 0 ? '🥇' : (i === 1 ? '🥈' : (i === 2 ? '🥉' : i + 1))}</span>
+                        <span class="text-3xl font-bold text-white">${t.name}</span>
+                    </div>
+                    <div class="flex items-center space-x-8">
+                        <span class="text-2xl text-blue-300">勋章: ${'🏅'.repeat(t.medals)}</span>
+                        <span class="text-4xl font-black text-yellow-500">${t.score} 分</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function switchRole(roleId) {
+            soundClick();
+            currentRole = roleId;
+            const r = roles[roleId];
+            document.getElementById('roleName').innerText = r.name;
+            document.getElementById('roleEmoji').innerText = r.emoji;
+            document.getElementById('roleStatus').innerText = r.status;
+            document.querySelectorAll('.role-btn').forEach(btn => btn.classList.remove('role-active'));
+            document.getElementById(`btn-${roleId}`).classList.add('role-active');
+            lastAiMessage = "";
+        }
+
+        function addDanmu(text, type) {
+            const d = document.createElement('div');
+            d.className = `danmu ${type==='success'?'danmu-success':'danmu-fail'}`;
+            d.innerText = text; d.style.top = Math.random() * 80 + '%';
+            document.getElementById('danmuLayer').appendChild(d);
+            setTimeout(() => d.remove(), 8000);
+        }
+
+        function closeJudge() { document.getElementById('judgeBox').classList.add('hidden'); }
+        document.getElementById('userInput').addEventListener('keypress', (e) => { if(e.key==='Enter') sendMessage(); });
+        window.onload = () => {
+            const savedKey = localStorage.getItem('gemini_api_key');
+            if (savedKey) { document.getElementById('apiKeyInput').value = savedKey; checkModels(); }
+        };
+    </script>
+</body>
+</html>

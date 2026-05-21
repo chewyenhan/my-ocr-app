@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>橄榄山：千年传奇 - 终极至尊版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+SC:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-gold: #d4af37;
+            --deep-blue: #0d1b3e;
+            --charcoal: #000000;
+            --parchment-white: #ffffff;
+        }
+
+        body {
+            background: #000 url('epic_historical_background_1778652200032.png') no-repeat center center fixed;
+            background-size: cover;
+            font-family: 'Noto Sans SC', sans-serif;
+            min-height: 100vh;
+            color: var(--charcoal);
+            overflow-x: hidden;
+            padding-bottom: 200px;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.98);
+            border: 8px solid var(--primary-gold);
+            border-radius: 40px;
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+        }
+
+        .epic-title {
+            font-family: 'Cinzel', serif;
+            color: var(--primary-gold);
+            text-shadow: 4px 4px 20px rgba(0,0,0,1);
+            letter-spacing: 2px;
+        }
+
+        .text-giant { font-size: 6rem; line-height: 1; }
+        .text-mega { font-size: 4rem; line-height: 1.2; font-weight: 900; }
+        .text-xlarge { font-size: 2.5rem; }
+
+        .question-box {
+            background-color: var(--parchment-white);
+            border-left: 15px solid var(--deep-blue);
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .option-btn {
+            background: #f8f9fa;
+            border: 6px solid #dee2e6;
+            border-radius: 30px;
+            transition: all 0.2s;
+            cursor: pointer;
+            padding: 1.5rem 2.5rem;
+            display: flex;
+            align-items: center;
+            font-size: 3rem;
+            font-weight: 900;
+        }
+
+        .option-btn:hover { border-color: var(--primary-gold); transform: scale(1.02); }
+        .option-btn.selected { border-color: var(--deep-blue); background: #e7f1ff; }
+        .option-btn.correct { background: #d4edda; border-color: #28a745; box-shadow: 0 0 40px rgba(40, 167, 69, 0.5); }
+        .option-btn.wrong { background: #f8d7da; border-color: #dc3545; }
+
+        .bottom-console {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: rgba(13, 27, 62, 0.95);
+            backdrop-filter: blur(20px);
+            border-top: 5px solid var(--primary-gold);
+            padding: 1.5rem 2rem;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .horizontal-teams {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            gap: 15px;
+            padding: 10px;
+            flex-grow: 1;
+        }
+
+        .team-btn {
+            background: #fff;
+            color: var(--deep-blue);
+            border: 3px solid var(--primary-gold);
+            border-radius: 15px;
+            padding: 1rem 2rem;
+            font-size: 1.8rem;
+            font-weight: 900;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .team-btn.active {
+            background: var(--primary-gold);
+            color: #000;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--primary-gold);
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+            color: #000;
+            font-weight: 900;
+            border: 2px solid #000;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-size: 1.8rem;
+            white-space: nowrap;
+        }
+
+        .action-btn:active { transform: translateY(3px); }
+        .action-btn:disabled { opacity: 0.5; filter: grayscale(1); }
+
+        .status-display {
+            background: var(--primary-gold);
+            color: #000;
+            padding: 1rem 2rem;
+            border-radius: 15px;
+            font-size: 2.2rem;
+            font-weight: 900;
+            min-width: 300px;
+            text-align: center;
+        }
+
+        .rules-badge {
+            background: #fffde7;
+            border: 4px dashed #fbc02d;
+            border-radius: 20px;
+            padding: 2rem;
+            margin: 2rem 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="bgm-widget" class="fixed top-5 right-5 bg-black/80 rounded-full p-3 text-white hidden z-[2000] flex items-center gap-4">
+        <span onclick="toggleBGM()" class="cursor-pointer text-2xl">🎵</span>
+        <input type="range" min="0" max="0.5" step="0.01" value="0.05" oninput="updateVolume(this.value)">
+    </div>
+
+    <div class="container mx-auto px-4 py-8 flex flex-col items-center">
+        
+        <!-- Step 1 -->
+        <div id="step-1" class="glass-card p-16 text-center w-full max-w-5xl mt-12">
+            <h1 class="epic-title text-giant mb-10">橄榄山：千年传奇</h1>
+            
+            <div class="rules-badge">
+                <h3 class="text-3xl font-black text-blue-900 mb-4">🏆 竞技计分规则：</h3>
+                <ul class="text-2xl space-y-2 font-bold text-gray-800">
+                    <li class="flex items-center"><span class="text-red-600 mr-2">●</span> <span class="bg-red-100 px-2">抢答第一组：</span> 答对 <span class="text-green-600">+2分</span>，答错 <span class="text-red-600">-1分</span></li>
+                    <li class="flex items-center"><span class="text-blue-600 mr-2">●</span> <span class="bg-blue-100 px-2">随机抽中组：</span> 答对 <span class="text-green-600">+1分</span>，答错 <span class="text-gray-500">不扣分</span></li>
+                    <li class="flex items-center"><span class="text-gray-600 mr-2">●</span> <span class="bg-gray-100 px-2">其他跟进组：</span> 答对 <span class="text-green-600">+1分</span>，答错 <span class="text-gray-500">不扣分</span></li>
+                </ul>
+            </div>
+
+            <p class="text-xlarge font-black mb-10">🏛️ 设定参赛战队数量</p>
+            <div class="flex items-center justify-center gap-12 mb-16">
+                <input type="range" id="t-count" min="1" max="10" value="3" class="w-full h-12 accent-yellow-600">
+                <span id="t-count-val" class="text-giant font-black bg-blue-900 text-white px-12 py-4 rounded-3xl">3</span>
+            </div>
+            <button onclick="toStep2()" class="action-btn px-20 py-10 text-5xl">下一步：配置详情 →</button>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="step-2" class="hidden glass-card p-12 w-full max-w-6xl mt-10 text-center">
+            <h2 class="epic-title text-mega mb-10">各组使徒配置</h2>
+            <div id="t-details" class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12"></div>
+            <button onclick="startGame()" class="action-btn px-24 py-12 text-6xl">开启传奇征程！</button>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="hidden w-full">
+            <div id="score-board" class="flex flex-wrap justify-center gap-6 mb-12"></div>
+
+            <div class="glass-card p-12 mb-20">
+                <div class="flex justify-between items-center mb-10 border-b-8 border-gold-500 pb-8">
+                    <h2 id="q-header" class="epic-title text-5xl">第1章</h2>
+                    <div id="q-diff" class="text-4xl text-orange-600">⭐⭐⭐</div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                    <div class="lg:col-span-3 text-center">
+                        <div id="s-emoji" class="text-[12rem] p-10 bg-white border-4 border-gray-200 rounded-[50px] shadow-2xl">🕊️</div>
+                    </div>
+                    <div class="lg:col-span-9">
+                        <div class="question-box mb-12"><p id="q-text" class="text-mega text-charcoal"></p></div>
+                        <div id="opts-box" class="grid grid-cols-1 gap-8"></div>
+                    </div>
+                </div>
+
+                <div id="t-note" class="hidden mt-16 p-12 bg-blue-50 border-8 border-blue-900 rounded-[60px]">
+                    <h4 class="text-5xl font-black text-blue-900 mb-6">📜 历史之声：</h4>
+                    <p id="n-text" class="text-4xl font-bold leading-snug"></p>
+                    <div class="flex justify-center mt-12">
+                        <button onclick="nextQ()" class="action-btn px-20 py-8 text-5xl">进入下一关 →</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="res-screen" class="hidden glass-card p-16 text-center w-full max-w-6xl mt-10">
+            <h1 class="epic-title text-giant mb-16">诸神荣誉榜</h1>
+            <div class="overflow-hidden rounded-[50px] border-8 border-yellow-500 bg-white mb-16">
+                <table class="w-full">
+                    <thead class="bg-blue-900 text-white text-4xl">
+                        <tr><th class="p-10">排名</th><th class="p-10">战队</th><th class="p-10">积分</th><th class="p-10">封号</th></tr>
+                    </thead>
+                    <tbody id="res-body" class="text-4xl font-black"></tbody>
+                </table>
+            </div>
+            <button onclick="location.reload()" class="action-btn px-20 py-10 text-5xl">再赛一轮</button>
+        </div>
+    </div>
+
+    <!-- 底部控制台 -->
+    <div id="footer-console" class="bottom-console hidden">
+        <div class="flex flex-col gap-2">
+            <button onclick="randTeam()" class="action-btn">🎲 随机点将</button>
+            <button id="rand-stu-btn" onclick="randStu()" class="action-btn" disabled>👤 随机选人</button>
+        </div>
+        <div class="flex flex-col flex-grow">
+            <p class="text-white text-xl font-bold mb-1 ml-4">手动选择举手组：</p>
+            <div id="h-teams" class="horizontal-teams"></div>
+        </div>
+        <div class="flex flex-col items-end gap-2">
+            <div id="cur-info" class="status-display">等待指令</div>
+            <button id="rev-btn" onclick="reveal()" class="hidden bg-red-600 text-white px-10 py-4 rounded-xl text-3xl font-black animate-pulse">揭晓答案！</button>
+        </div>
+    </div>
+
+    <script>
+        const scenes = [
+            { id: "birth", title: "发源地", emoji: "🕊️", diff: "⭐", q: "公元1世纪，基督教产生于哪一个被罗马帝国统治的地区？", note: "基督教产生于巴勒斯坦地区。当地的犹太人长期遭受罗马统治，渴望得到上帝的拯救。", options: ["巴勒斯坦地区", "两河流域", "印度半岛"], ans: 0 },
+            { id: "jesus", title: "创始人", emoji: "⛪", diff: "⭐", q: "基督教的创始人是谁？他被信徒尊称为救世主。", note: "创始人是耶稣。他在30岁左右开始传道，宣扬上帝的爱、宽恕和平等。", options: ["穆罕默德", "乔达摩悉达多", "耶稣"], ans: 2 },
+            { id: "spirit", title: "核心精神", emoji: "❤️", diff: "⭐⭐", q: "基督教主张人人平等，其核心精神是？", note: "核心教义是博爱、宽容、平等。这些教义吸引了大量受苦受难的民众。", options: ["严格阶级划分", "博爱、宽恕和平等", "因果报应"], ans: 1 },
+            { id: "bible", title: "经典文献", emoji: "📖", diff: "⭐⭐", q: "基督教的宗教经典被称为？", note: "《圣经》是基督教核心经典。它记录了耶稣的事迹和早期的教义。", options: ["可兰经", "圣经", "吠陀经"], ans: 1 },
+            { id: "cross", title: "圣印", emoji: "✝️", diff: "⭐⭐", q: "耶稣被钉在十字架上死而复活后，基督教以此为标志？", note: "耶稣的复活坚定了信徒的信心，十字架从此成为神圣的标志。", options: ["十字架", "新月", "法轮"], ans: 0 },
+            { id: "milan", title: "合法转折", emoji: "📜", diff: "⭐⭐⭐", q: "4世纪初，颁布《米兰敕令》承认基督教合法的皇帝是？", note: "君士坦丁大帝颁布了米兰敕令。他也是第一个信奉基督教的罗马皇帝。", options: ["凯撒大帝", "君士坦丁大帝", "尼禄"], ans: 1 },
+            { id: "national", title: "帝国国教", emoji: "👑", diff: "⭐⭐⭐", q: "基督教正式成为罗马帝国国教是在什么时候？", note: "4世纪末，基督教正式成为国教，地位攀升至巅峰。", options: ["1世纪中叶", "4世纪末", "11世纪初"], ans: 1 },
+            { id: "split", title: "教会分裂", emoji: "⚔️", diff: "⭐⭐⭐⭐", q: "11世纪分裂后，以罗马为中心教派叫？", note: "以罗马为中心的是天主教（罗马公教），以君士坦丁堡为中心的是东正教。", options: ["天主教", "东正教", "新教"], ans: 0 },
+            { id: "protestant", title: "宗教改革", emoji: "⚡", diff: "⭐⭐⭐⭐", q: "16世纪宗教改革后，从天主教中分出的教派是？", note: "宗教改革后产生了新教，与天主教、东正教并列为三大派别。", options: ["新教", "伊斯兰教", "印度教"], ans: 0 },
+            { id: "malaysia", title: "传向东南亚", emoji: "🚢", diff: "⭐⭐⭐⭐⭐", q: "马六甲的天主教最初是由哪一个欧洲殖民力量传入的？", note: "天主教由葡萄牙人传入；新教则随荷兰和英国殖民者后期传入。", options: ["葡萄牙", "荷兰", "英国"], ans: 0 }
+        ];
+
+        const sounds = {
+            start: new Audio('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3'),
+            click: new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'),
+            correct: new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3'),
+            wrong: new Audio('https://assets.mixkit.co/active_storage/sfx/256/256-preview.mp3'),
+            bgm: new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3')
+        };
+        sounds.bgm.loop = true;
+
+        let teams = [];
+        let qIdx = 0;
+        let activeIdx = -1;
+        let firstIdx = -1;
+        let locked = 0;
+        let bgmOn = false;
+
+        document.getElementById('t-count').oninput = function() {
+            document.getElementById('t-count-val').innerText = this.value;
+        };
+
+        function toStep2() {
+            sounds.start.play(); sounds.bgm.play(); bgmOn = true;
+            document.getElementById('bgm-widget').classList.remove('hidden');
+            const count = document.getElementById('t-count').value;
+            const container = document.getElementById('t-details');
+            container.innerHTML = '';
+            for(let i=1; i<=count; i++) {
+                container.innerHTML += `
+                    <div class="bg-white p-6 rounded-3xl border-4 border-yellow-200">
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-3xl font-black">战队 ${i}</span>
+                            <div class="flex items-center gap-4">
+                                <span class="text-xl font-bold">人数:</span>
+                                <input type="number" id="t-size-${i}" value="4" min="1" max="20" class="w-16 p-2 text-2xl border-2 border-blue-900 rounded-xl text-center">
+                            </div>
+                        </div>
+                        <input type="text" id="t-name-${i}" placeholder="输入队名..." class="w-full p-4 text-2xl rounded-xl border-2 border-gray-100 outline-none">
+                    </div>
+                `;
+            }
+            document.getElementById('step-1').classList.add('hidden');
+            document.getElementById('step-2').classList.remove('hidden');
+        }
+
+        function startGame() {
+            const count = document.getElementById('t-count').value;
+            for(let i=1; i<=count; i++) {
+                teams.push({
+                    name: document.getElementById(`t-name-${i}`).value || `战队 ${i}`,
+                    size: document.getElementById(`t-size-${i}`).value,
+                    score: 0, selection: null, isFirst: false, wasRandom: false
+                });
+            }
+            document.getElementById('step-2').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            document.getElementById('footer-console').classList.remove('hidden');
+            renderScore(); loadQ();
+        }
+
+        function loadQ() {
+            const s = scenes[qIdx];
+            document.getElementById('q-header').innerText = `第${qIdx+1}/${scenes.length}关：${s.title}`;
+            document.getElementById('q-diff').innerText = s.diff;
+            document.getElementById('s-emoji').innerText = s.emoji;
+            document.getElementById('q-text').innerText = s.q;
+            document.getElementById('t-note').classList.add('hidden');
+            document.getElementById('rev-btn').classList.add('hidden');
+            document.getElementById('cur-info').innerText = "请选择战队";
+            document.getElementById('rand-stu-btn').disabled = true;
+            
+            activeIdx = -1; firstIdx = -1; locked = 0;
+            teams.forEach(t => { t.selection = null; t.isFirst = false; t.wasRandom = false; });
+            
+            renderOpts(); renderH(); renderScore();
+            speak(s.q);
+        }
+
+        function renderOpts() {
+            const box = document.getElementById('opts-box');
+            box.innerHTML = '';
+            scenes[qIdx].options.forEach((opt, i) => {
+                const b = document.createElement('button');
+                b.className = "option-btn";
+                b.innerHTML = `<span class="bg-blue-900 text-white w-20 h-20 rounded-2xl flex items-center justify-center mr-8 text-5xl">${String.fromCharCode(65+i)}</span> <span>${opt}</span>`;
+                b.onclick = () => choose(i);
+                box.appendChild(b);
+            });
+        }
+
+        function renderH() {
+            const h = document.getElementById('h-teams');
+            h.innerHTML = teams.map((t, i) => `
+                <button onclick="selT(${i}, false)" class="team-btn ${t.selection !== null ? 'opacity-30' : ''} ${i === activeIdx ? 'active' : ''}">
+                    ${t.name}
+                </button>
+            `).join('');
+        }
+
+        function selT(i, isRandom) {
+            if(teams[i].selection !== null) return;
+            sounds.click.play();
+            activeIdx = i;
+            if(isRandom) teams[i].wasRandom = true;
+            document.getElementById('cur-info').innerText = teams[i].name + (isRandom ? " (抽中)" : "");
+            document.getElementById('rand-stu-btn').disabled = false;
+            renderH();
+        }
+
+        function randTeam() {
+            const av = teams.map((t,i)=>i).filter(i=>teams[i].selection === null);
+            if(av.length === 0) return;
+            let c = 0;
+            const iv = setInterval(()=>{
+                selT(av[Math.floor(Math.random()*av.length)], true);
+                c++; if(c>8) clearInterval(iv);
+            }, 100);
+        }
+
+        function randStu() {
+            if(activeIdx === -1) return;
+            sounds.click.play();
+            const sNum = Math.floor(Math.random() * teams[activeIdx].size) + 1;
+            document.getElementById('cur-info').innerText = `${teams[activeIdx].name} - ${sNum}号`;
+            speak(`请 ${teams[activeIdx].name} 的 ${sNum} 号回答`);
+        }
+
+        function choose(i) {
+            if(activeIdx === -1) { alert("请先在底部选择战队！"); return; }
+            teams[activeIdx].selection = i;
+            if(firstIdx === -1) { firstIdx = activeIdx; teams[activeIdx].isFirst = true; }
+            locked++; activeIdx = -1;
+            document.getElementById('cur-info').innerText = "已锁定";
+            document.getElementById('rand-stu-btn').disabled = true;
+            sounds.click.play(); renderH();
+            if(locked === teams.length) document.getElementById('rev-btn').classList.remove('hidden');
+        }
+
+        function reveal() {
+            const ans = scenes[qIdx].ans;
+            const btns = document.getElementById('opts-box').children;
+            for(let i=0; i<btns.length; i++) {
+                if(i === ans) btns[i].classList.add('correct');
+                else btns[i].classList.add('wrong');
+            }
+            teams.forEach(t => {
+                if(t.selection === ans) {
+                    if(t.isFirst && !t.wasRandom) { t.score += 2; sounds.correct.play(); }
+                    else { t.score += 1; sounds.correct.play(); }
+                } else {
+                    if(t.isFirst && !t.wasRandom) { t.score -= 1; sounds.wrong.play(); }
+                    // Random picks and non-first manual picks don't lose points
+                }
+            });
+            renderScore();
+            document.getElementById('rev-btn').classList.add('hidden');
+            document.getElementById('t-note').classList.remove('hidden');
+            document.getElementById('n-text').innerText = scenes[qIdx].note;
+            document.getElementById('t-note').scrollIntoView({ behavior: 'smooth' });
+            speak(`总结：${scenes[qIdx].note}`);
+        }
+
+        function nextQ() {
+            qIdx++; if(qIdx < scenes.length) loadQ(); else showEnd();
+        }
+
+        function renderScore() {
+            document.getElementById('score-board').innerHTML = teams.map(t => `<div class="team-btn text-2xl px-8">${t.name}: <span class="text-yellow-600">${t.score}</span></div>`).join('');
+        }
+
+        function showEnd() {
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('footer-console').classList.add('hidden');
+            document.getElementById('res-screen').classList.remove('hidden');
+            const sorted = [...teams].sort((a,b)=>b.score-a.score);
+            document.getElementById('res-body').innerHTML = sorted.map((t,i) => {
+                let r = t.score >= 15 ? "教廷大祭司" : (t.score >= 10 ? "荣誉信徒" : "求知学者");
+                return `<tr><td class="p-10">#${i+1}</td><td class="p-10">${t.name}</td><td class="p-10"><span class="bg-blue-900 text-white px-8 py-2 rounded-xl">${t.score}</span></td><td class="p-10 text-blue-800">${r}</td></tr>`;
+            }).join('');
+            speak("比赛圆满结束！");
+        }
+
+        function speak(t) {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(t);
+            u.lang = 'zh-CN'; u.rate = 0.9;
+            window.speechSynthesis.speak(u);
+        }
+
+        function toggleBGM() {
+            if(bgmOn) sounds.bgm.pause(); else sounds.bgm.play();
+            bgmOn = !bgmOn;
+        }
+
+        function updateVolume(v) { sounds.bgm.volume = v; }
+    </script>
+</body>
+</html>
