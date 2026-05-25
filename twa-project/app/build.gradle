@@ -51,7 +51,7 @@ def twaManifest = [
 ]
 
 android {
-    compileSdkVersion 36
+    compileSdkVersion 35
     namespace "com.chewyenhan.snaptextocr"
     defaultConfig {
         applicationId "com.chewyenhan.snaptextocr"
