@@ -23,10 +23,9 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        run: |
-          mkdir -p $HOME/android-sdk
-          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-35 build-tools;35.0.0 platforms;android-36'
 
       - name: Generate keystore
         run: |
@@ -38,15 +37,15 @@ jobs:
             -keypass android123 \
             -dname "CN=Snaptext, OU=Dev, O=ChewYenHan, L=Taiping, ST=Perak, C=MY"
 
-      - name: Build APK with Gradle
+      - name: Build APK
         working-directory: twa-project
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=$(pwd)/../release.keystore \
-            -Pandroid.injected.signing.store.password=android123 \
-            -Pandroid.injected.signing.key.alias=snaptext \
-            -Pandroid.injected.signing.key.password=android123
+          ./gradlew assembleRelease
+        env:
+          STORE_PASS: android123
+          KEY_PASS: android123
+          KEY_ALIAS: snaptext
 
       - name: Collect APK
         run: |
@@ -54,7 +53,6 @@ jobs:
           find twa-project -name "*.apk" -exec cp {} output/ \; 2>/dev/null
           echo "=== APK files ==="
           ls -la output/ || echo "No APK found"
-          find twa-project -name "*.apk" -o -name "*.aab" 2>/dev/null
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
