@@ -4,3 +4,4 @@ hs_err_pid*.log
 *.keystore
 signing-key-info.txt
 *.zip
+playstore/snaptext-signing.keystore
