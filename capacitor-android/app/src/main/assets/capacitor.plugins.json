@@ -1,0 +1,8 @@
+[
+  {
+    "classpath": "com.capacitorjs.plugins.filesystem.FilesystemPlugin"
+  },
+  {
+    "classpath": "com.capacitorjs.plugins.share.SharePlugin"
+  }
+]
