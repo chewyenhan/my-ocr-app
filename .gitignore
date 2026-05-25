@@ -1,0 +1,3 @@
+node_modules/
+*.log
+hs_err_pid*.log
