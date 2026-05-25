@@ -1,3 +1,6 @@
 node_modules/
 *.log
 hs_err_pid*.log
+*.keystore
+signing-key-info.txt
+*.zip
