@@ -2,15 +2,6 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'manifest.json'
-      - 'assets/icon-*.png'
-      - 'sw.js'
-      - 'index.html'
-      - '.github/workflows/build-apk.yml'
 
 jobs:
   build-apk:
@@ -31,9 +22,10 @@ jobs:
           java-version: '17'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          packages: 'platforms;android-34 build-tools;34.0.0'
+        run: |
+          mkdir -p $HOME/android-sdk
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
 
       - name: Install bubblewrap
         run: npm install -g @bubblewrap/cli
@@ -44,53 +36,49 @@ jobs:
             -keystore release.keystore \
             -alias snaptext \
             -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android \
-            -keypass android \
+            -storepass android123 \
+            -keypass android123 \
             -dname "CN=Snaptext, OU=Dev, O=ChewYenHan, L=Taiping, ST=Perak, C=MY"
 
-      - name: Initialize bubblewrap project
+      - name: Init TWA project from PWA manifest
         run: |
-          mkdir -p twa-project
-          cat > twa-project/twa-manifest.json << 'EOF'
-          {
-            "packageId": "com.chewyenhan.snaptextocr",
-            "host": "chewyenhan.github.io",
-            "name": "Snaptext OCR",
-            "shortName": "Snaptext OCR",
-            "themeColor": "#0f172a",
-            "backgroundColor": "#0f172a",
-            "startUrl": "/my-ocr-app/",
-            "display": "standalone",
-            "orientation": "portrait",
-            "iconUrl": "https://chewyenhan.github.io/my-ocr-app/assets/icon-512.png",
-            "maskableIconUrl": "https://chewyenhan.github.io/my-ocr-app/assets/icon-512.png",
-            "splashScreenFadeOutDuration": 300,
-            "enableNotifications": false,
-            "signingKey": {
-              "path": "../release.keystore",
-              "alias": "snaptext"
-            }
-          }
-          EOF
+          mkdir -p twa
+          bubblewrap init \
+            --manifest="https://chewyenhan.github.io/my-ocr-app/manifest.json" \
+            --directory="twa"
+
+      - name: Configure signing
+        run: |
+          cd twa
+          # Update twa-manifest.json to add signing key
+          node -e "
+            const fs = require('fs');
+            const m = JSON.parse(fs.readFileSync('twa-manifest.json', 'utf8'));
+            m.signingKey = { path: '../release.keystore', alias: 'snaptext' };
+            fs.writeFileSync('twa-manifest.json', JSON.stringify(m, null, 2));
+          "
+          cat twa-manifest.json
 
       - name: Build APK
-        working-directory: twa-project
+        working-directory: twa
         run: |
           bubblewrap build
         env:
-          STORE_PASS: android
-          KEY_PASS: android
+          STORE_PASS: android123
+          KEY_PASS: android123
           KEY_ALIAS: snaptext
 
-      - name: Find and collect APK
+      - name: Collect APK
         run: |
           mkdir -p output
-          find . -path "*/build/outputs/apk/*.apk" -exec cp {} output/ \; 2>/dev/null || true
-          find . -path "*/build/outputs/bundle/*.aab" -exec cp {} output/ \; 2>/dev/null || true
-          echo "Output files:"
-          ls -la output/ || echo "No output files"
+          find . -name "*.apk" -exec cp {} output/ \; 2>/dev/null
+          echo "=== Files in output ==="
+          ls -la output/ 2>/dev/null || echo "No APK files found"
+          echo "=== Searching for APK ==="
+          find . -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "No APK/AAB found"
 
-      - name: Upload APK artifact
+      - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: snaptext-ocr-apk
