@@ -14,13 +14,25 @@
     <script type="module" crossorigin src="./assets/index-DYRXLDUj.js"></script>
     <link rel="stylesheet" crossorigin href="./assets/index-CyiqLYEw.css">
   </head>
-  <body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0f19" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Snaptext OCR - Batch photo text extractor powered by Gemini AI. Take multiple photos, extract all text at once. Built for teachers." />
+    <title>Snaptext: Batch Photo OCR</title>
+    <meta name="description" content="Snaptext: Batch Photo OCR - Take multiple photos, extract all text at once with Gemini AI. One-time purchase. No subscription. BYO API key." />
+    <link rel="icon" href="./favicon.svg" />
+    <link rel="manifest" href="./manifest.json" />
     <script>
-      if (!window.matchMedia('(display-mode: standalone)').matches && !document.referrer.includes('android-app://')) {
-        document.write('<html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Snaptext OCR</title></head><body style="margin:0;background:#0b0f19;color:white;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px"><div><h1 style="font-size:24px;margin-bottom:16px">📱 Snaptext: Batch Photo OCR</h1><p style="color:#94a3b8;margin-bottom:24px">Exclusively available on Google Play Store.<br>No subscription. One-time purchase.</p><a href="https://play.google.com/store/apps/details?id=io.github.chewyenhan.twa" style="display:inline-block;background:#6366f1;color:white;padding:12px 32px;border-radius:24px;text-decoration:none;font-weight:bold">Get it on Google Play</a></div></body></html>');
-        document.close();
+      if (!window.matchMedia('(display-mode: standalone)').matches && !document.referrer.includes('android-app://') && !sessionStorage.getItem('app_opened')) {
+        sessionStorage.setItem('app_opened', '1');
+        document.documentElement.innerHTML = '<head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Snaptext OCR</title><style>body{margin:0;background:#0b0f19;color:#fff;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px;box-sizing:border-box}h1{font-size:24px;margin-bottom:16px}p{color:#94a3b8;margin-bottom:24px}a{display:inline-block;background:#6366f1;color:#fff;padding:12px 32px;border-radius:24px;text-decoration:none;font-weight:bold}</style></head><body><div><h1>Snaptext: Batch Photo OCR</h1><p>Exclusively available on Google Play Store.<br>One-time purchase. No subscription.</p><a href="https://play.google.com/store/apps/details?id=io.github.chewyenhan.twa">Get it on Google Play</a></div></body>';
       }
     </script>
+  </head>
+  <body>
     <div id="root"></div>
   </body>
 </html>
