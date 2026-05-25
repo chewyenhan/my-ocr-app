@@ -1,0 +1,26 @@
+{
+  "name": "Snaptext OCR - 批量拍照提取文字",
+  "short_name": "Snaptext OCR",
+  "description": "专为教师打造的批量拍照OCR工具 - 多张照片一键提取文字，支持导出TXT和PDF",
+  "start_url": "https://chewyenhan.github.io/my-ocr-app/",
+  "scope": "https://chewyenhan.github.io/my-ocr-app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
