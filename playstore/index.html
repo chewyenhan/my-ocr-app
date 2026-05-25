@@ -15,12 +15,12 @@
     <link rel="stylesheet" crossorigin href="./assets/index-CyiqLYEw.css">
   </head>
   <body>
-    <div id="root"></div>
     <script>
       if (!window.matchMedia('(display-mode: standalone)').matches && !document.referrer.includes('android-app://')) {
-        document.getElementById('root').innerHTML = '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0b0f19;color:white;font-family:sans-serif;text-align:center;padding:20px;"><div><h1 style="font-size:24px;margin-bottom:16px;">📱 Snaptext OCR</h1><p style="color:#94a3b8;margin-bottom:24px;">This app is available exclusively on Google Play Store.</p><a href="https://play.google.com/store/apps/details?id=io.github.chewyenhan.twa" style="display:inline-block;background:#6366f1;color:white;padding:12px 32px;border-radius:24px;text-decoration:none;font-weight:bold;">Get it on Google Play</a></div></div>';
-        document.querySelector('script[type="module"]')?.remove();
+        document.write('<html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Snaptext OCR</title></head><body style="margin:0;background:#0b0f19;color:white;font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:20px"><div><h1 style="font-size:24px;margin-bottom:16px">📱 Snaptext: Batch Photo OCR</h1><p style="color:#94a3b8;margin-bottom:24px">Exclusively available on Google Play Store.<br>No subscription. One-time purchase.</p><a href="https://play.google.com/store/apps/details?id=io.github.chewyenhan.twa" style="display:inline-block;background:#6366f1;color:white;padding:12px 32px;border-radius:24px;text-decoration:none;font-weight:bold">Get it on Google Play</a></div></body></html>');
+        document.close();
       }
     </script>
+    <div id="root"></div>
   </body>
 </html>
