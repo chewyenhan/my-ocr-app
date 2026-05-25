@@ -1,0 +1,103 @@
+name: Build Snaptext APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+      - 'android/**'
+      - 'package.json'
+      - '.github/workflows/build-apk.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: mingc/android-build-box:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web
+        run: npm run build
+
+      - name: Create capacitor-android directory if needed
+        run: |
+          if [ ! -d "capacitor-android" ]; then
+            npx cap init || true
+            npx cap add android || true
+          fi
+
+      - name: Update Capacitor
+        run: npx cap sync android || true
+
+      - name: Generate keystore
+        run: |
+          mkdir -p keystore
+          cd keystore
+          keytool -genkey -v \
+            -keystore snaptext.keystore \
+            -alias snaptext \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass snaptext123 \
+            -keypass snaptext123 \
+            -dname "CN=Snaptext,O=Snaptext,C=US" 2>/dev/null || true
+          cd ..
+
+      - name: Build Android Release APK
+        working-directory: capacitor-android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -DSTORE_FILE=../keystore/snaptext.keystore \
+            -DSTORE_PASSWORD=snaptext123 \
+            -DKEY_ALIAS=snaptext \
+            -DKEY_PASSWORD=snaptext123 \
+            --stacktrace 2>&1 | tee build.log
+        env:
+          STORE_PASS: snaptext123
+          KEY_PASS: snaptext123
+          KEY_ALIAS: snaptext
+
+      - name: List APK files
+        if: always()
+        run: |
+          echo "=== Looking for APK files ==="
+          find . -name "*.apk" -type f -ls 2>/dev/null || echo "No APK files found"
+          find . -name "*.aab" -type f -ls 2>/dev/null || echo "No AAB files found"
+
+      - name: Collect APK
+        run: |
+          mkdir -p output
+          find capacitor-android -name "*release*.apk" -exec cp {} output/ \; 2>/dev/null
+          find capacitor-android -name "*.apk" -exec cp {} output/ \; 2>/dev/null
+          ls -lah output/ || echo "No APK collected"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: snaptext-apk
+          path: output/
+          if-no-files-found: ignore
+          retention-days: 90
+
+      - name: Create Release
+        if: success() && github.event_name == 'push'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: output/*.apk
+          tag_name: release-${{ github.run_number }}
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
