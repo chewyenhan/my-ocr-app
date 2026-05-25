@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'twa-project/**'
+      - '.github/workflows/build-apk.yml'
 
 jobs:
   build-apk:
@@ -12,11 +15,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -30,9 +28,6 @@ jobs:
           echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
           echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
 
-      - name: Install bubblewrap
-        run: npm install -g @bubblewrap/cli
-
       - name: Generate keystore
         run: |
           keytool -genkey -v \
@@ -43,44 +38,25 @@ jobs:
             -keypass android123 \
             -dname "CN=Snaptext, OU=Dev, O=ChewYenHan, L=Taiping, ST=Perak, C=MY"
 
-      - name: Init TWA project from PWA manifest
+      - name: Build APK with Gradle
+        working-directory: twa-project
         run: |
-          mkdir -p twa
-          cd twa
-          yes n | bubblewrap init --manifest="https://chewyenhan.github.io/my-ocr-app/manifest.json"
-
-      - name: Configure signing
-        run: |
-          cd twa
-          # Update twa-manifest.json to add signing key
-          node -e "
-            const fs = require('fs');
-            const m = JSON.parse(fs.readFileSync('twa-manifest.json', 'utf8'));
-            m.signingKey = { path: '../release.keystore', alias: 'snaptext' };
-            fs.writeFileSync('twa-manifest.json', JSON.stringify(m, null, 2));
-          "
-          cat twa-manifest.json
-
-      - name: Build APK
-        working-directory: twa
-        run: |
-          bubblewrap build
-        env:
-          STORE_PASS: android123
-          KEY_PASS: android123
-          KEY_ALIAS: snaptext
+          chmod +x gradlew
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=$(pwd)/../release.keystore \
+            -Pandroid.injected.signing.store.password=android123 \
+            -Pandroid.injected.signing.key.alias=snaptext \
+            -Pandroid.injected.signing.key.password=android123
 
       - name: Collect APK
         run: |
           mkdir -p output
-          find . -name "*.apk" -exec cp {} output/ \; 2>/dev/null
-          echo "=== Files in output ==="
-          ls -la output/ 2>/dev/null || echo "No APK files found"
-          echo "=== Searching for APK ==="
-          find . -name "*.apk" -o -name "*.aab" 2>/dev/null || echo "No APK/AAB found"
+          find twa-project -name "*.apk" -exec cp {} output/ \; 2>/dev/null
+          echo "=== APK files ==="
+          ls -la output/ || echo "No APK found"
+          find twa-project -name "*.apk" -o -name "*.aab" 2>/dev/null
 
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: snaptext-ocr-apk
