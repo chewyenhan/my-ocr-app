@@ -46,9 +46,8 @@ jobs:
       - name: Init TWA project from PWA manifest
         run: |
           mkdir -p twa
-          bubblewrap init \
-            --manifest="https://chewyenhan.github.io/my-ocr-app/manifest.json" \
-            --directory="twa"
+          cd twa
+          yes n | bubblewrap init --manifest="https://chewyenhan.github.io/my-ocr-app/manifest.json"
 
       - name: Configure signing
         run: |
