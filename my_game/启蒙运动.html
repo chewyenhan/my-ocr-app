@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>理想号：理性的终极考验 3.0 (教室投影版)</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --accent: #f59e0b;
+            --danger: #ef4444;
+            --success: #10b981;
+            --bg: #1e293b;
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: white;
+        }
+
+        #game-wrapper {
+            background: #ffffff;
+            color: #334155;
+            width: 98%;
+            max-width: 1000px; /* 增加整体宽度 */
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+            position: relative;
+        }
+
+        /* 顶部视觉区 - 增加高度 */
+        #visual-portal {
+            height: 320px;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.8s ease;
+        }
+
+        /* 角色容器 - 极大化 Emoji */
+        .stage-item {
+            font-size: 160px; 
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3));
+            z-index: 2;
+        }
+
+        /* 动态背景装饰 */
+        .bg-decor {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.1;
+            font-size: 200px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        /* 内容区 - 增加内边距 */
+        #content-box {
+            padding: 50px 60px;
+        }
+
+        /* 标签字号放大 */
+        .level-tag {
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: 22px; 
+            color: var(--primary);
+            font-weight: 800;
+            margin-bottom: 15px;
+        }
+
+        /* 标题字号极大化 */
+        #title { 
+            margin: 0 0 20px 0; 
+            font-size: 45px; 
+            font-weight: 900;
+            color: #000;
+        }
+        
+        /* 描述正文字号放大 */
+        #description { 
+            font-size: 30px; 
+            line-height: 1.5; 
+            color: #475569; 
+            margin-bottom: 40px; 
+            font-weight: 500;
+        }
+
+        /* 选项设计 - 增加间距 */
+        .option-group { display: flex; flex-direction: column; gap: 20px; }
+
+        /* 选项按钮字号极大化 */
+        .btn-opt {
+            background: #f8fafc;
+            border: 3px solid #e2e8f0;
+            padding: 25px 35px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s;
+            font-size: 28px; 
+            color: #1e293b;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        .btn-opt:hover {
+            border-color: var(--primary);
+            background: #eef2ff;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.1);
+        }
+
+        /* 反馈层 */
+        #overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.98);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 50px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* 反馈层标题和文字放大 */
+        #overlay h3 { font-size: 50px; margin-bottom: 30px; }
+        #overlay p { font-size: 32px; line-height: 1.6; margin-bottom: 40px; color: #000; }
+
+        /* 操作按钮放大 */
+        .btn-action {
+            padding: 25px 60px;
+            border-radius: 60px;
+            border: none;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 30px;
+        }
+
+        .btn-next { background: var(--success); }
+        .btn-retry { background: var(--danger); }
+
+        /* 勋章图标放大 */
+        .medals { position: absolute; top: 25px; right: 25px; display: flex; gap: 15px; z-index: 5; }
+        .m-icon { width: 60px; height: 60px; font-size: 35px; background: rgba(0,0,0,0.2); border-radius: 50%; display: flex; justify-content: center; align-items: center; filter: grayscale(1); }
+        .m-icon.unlocked { filter: grayscale(0); background: var(--accent); transform: scale(1.1); }
+
+        /* 特效动画 */
+        .shake { animation: shakeAnim 0.5s ease-in-out; }
+        @keyframes shakeAnim {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+    <div class="medals">
+        <div id="med-1" class="m-icon">📜</div>
+        <div id="med-2" class="m-icon">⚖️</div>
+        <div id="med-3" class="m-icon">💰</div>
+    </div>
+
+    <div id="visual-portal">
+        <div class="bg-decor">🌴🌊</div>
+        <div id="stage-main" class="stage-item">🛸</div>
+    </div>
+
+    <div id="content-box">
+        <div id="level-num" class="level-tag">Mission: Landing</div>
+        <h2 id="title">理想号：文明火种</h2>
+        <p id="description">“理想号”由于遭遇时空扰动，正在迫降... 请指挥官下达指令！</p>
+        
+        <div id="option-list" class="option-group">
+            <button class="btn-opt" onclick="initGame()">立即执行迫降程序</button>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h3 id="overlay-title">结果</h3>
+        <p id="overlay-body"></p>
+        <button id="overlay-btn" class="btn-action"></button>
+    </div>
+</div>
+
+<script>
+    // 逻辑部分保持 3.0 原封不动
+    const levels = [
+        {
+            tag: "LEVEL 01: 社会构建",
+            title: "谁是规则的制定者？",
+            emoji: "👹", 
+            bg: "linear-gradient(135deg, #4b5563 0%, #111827 100%)",
+            description: "舱门打开，大壮展示了他惊人的肌肉，他挡住水箱宣布：“现在是紧急状态，一切行动必须听我的！我会保护你们，但谁敢质疑我，就滚出营地！”",
+            options: [
+                {
+                    text: "“生存高于一切。在这个危险的岛上，我们需要一个强大的领袖来统筹资源。”",
+                    result: "fail",
+                    title: "❌ 失败：家长式专制",
+                    body: "你选择了暂时的安全，却出卖了永久的自由。大壮很快开始随意分配食物，不同意他的人被活活饿死。营地退化成了独裁者的乐园。"
+                },
+                {
+                    text: "“每个人都是自由的。我们应该共同起草一份契约，明确每个人的权利和义务，权力必须来自所有人的授权。”",
+                    result: "success",
+                    title: "✨ 成功：社会契约",
+                    body: "你运用了卢梭的智慧。你让大家意识到：只有当每个人都参与规则的制定，服从规则才是服从自己。大壮不得不收起了拳头，坐下来签字。解锁：卢梭勋章！"
+                },
+                {
+                    text: "“强者不该欺负弱者。我们干脆取消所有领导职位，大家凭自觉做事，互不干涉。”",
+                    result: "fail",
+                    title: "❌ 失败：无序状态",
+                    body: "听起来很美好，但到了晚上，为了抢夺干燥的睡觉地方，同学们爆发了混战。没有契约约束，自由变成了弱肉强食。营地崩溃了。"
+                }
+            ]
+        },
+        {
+            tag: "LEVEL 02: 权力制衡",
+            title: "如何管住“勤奋”的班长？",
+            emoji: "👩‍💼", 
+            bg: "linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%)",
+            description: "小美被选为班长，她非常负责。她白天制定采集计划，下午带队抓小偷，晚上还要亲自审判违规者。她觉得自己很辛苦，但大家越来越怕她。",
+            options: [
+                {
+                    text: "“小美太累了。我们应该增加一个副班长来协助她，分担她的工作量。”",
+                    result: "fail",
+                    title: "❌ 失败：官僚主义",
+                    body: "两个班长不仅没有解决问题，反而联手压迫大家。权力的集中并没有因为人手的增加而改变，反而变得更难动摇。"
+                },
+                {
+                    text: "“分工必须彻底。制定计划的、执行任务的、处理纠纷的必须是三群互不干涉的人。”",
+                    result: "success",
+                    title: "✨ 成功：三权分立",
+                    body: "这就是孟德斯鸠的秘诀！你将权力拆解，让它们在互相碰撞中达到平衡。小美虽然不再拥有绝对权力，但营地却变得更加公平和法治。解锁：孟德斯鸠勋章！"
+                },
+                {
+                    text: "“建立监督委员会。每当小美做一个决定，必须由委员会审核通过，否则无效。”",
+                    result: "fail",
+                    title: "❌ 失败：效率陷阱",
+                    body: "委员会很快变成了争吵的温床，营地决策极度缓慢。更糟的是，小美通过收买委员会成员，绕过了监督。权力依然在暗处膨胀。"
+                }
+            ]
+        },
+        {
+            tag: "LEVEL 03: 经济活力",
+            title: "让烤鱼摊活下去的秘密",
+            emoji: "🐟", 
+            bg: "linear-gradient(135deg, #065f46 0%, #064e3b 100%)",
+            description: "岛上的小超市开张了。为了照顾所有人，管理层规定：所有的烤鱼统一卖2个贝壳。结果捕鱼人发现贝壳买不到足够的燃料，纷纷收摊不干了。怎么办？",
+            options: [
+                {
+                    text: "“给捕鱼人发放补贴。从大家手里收税，然后发给他们，鼓励他们继续工作。”",
+                    result: "fail",
+                    title: "❌ 失败：税收沉重",
+                    body: "税收让其他同学苦不堪言，而补贴并没有提高捕鱼人的效率，他们开始偷懒等领钱。营地陷入了停滞的泥潭。"
+                },
+                {
+                    text: "“由岛长统一管理渔船。所有人轮流捕鱼，捕到的鱼全部放入公共粮仓，按需领取。”",
+                    result: "fail",
+                    title: "❌ 失败：平均主义之痛",
+                    body: "每个人都想少干活多领鱼。鱼越来越少，腐烂却越来越多。由于缺乏个人利益的驱动，经济彻底枯竭。"
+                },
+                {
+                    text: "“取消统一限价，让买鱼的人和捕鱼的人自己商量。价格会告诉大家：现在缺不缺鱼。”",
+                    result: "success",
+                    title: "✨ 成功：自由贸易",
+                    body: "亚当·斯密那只‘看不见的手’起作用了！价格的波动不仅带来了更多的鱼，还让岛上诞生了冷链技术。营地变得无比繁荣。解锁：亚当斯密勋章！"
+                }
+            ]
+        }
+    ];
+
+    let currentLevel = 0;
+
+    function initGame() {
+        document.getElementById('visual-portal').classList.add('shake');
+        setTimeout(() => {
+            renderLevel();
+        }, 500);
+    }
+
+    function renderLevel() {
+        const lvl = levels[currentLevel];
+        const portal = document.getElementById('visual-portal');
+        const main = document.getElementById('stage-main');
+        const overlay = document.getElementById('overlay');
+
+        overlay.style.display = 'none';
+        portal.style.background = lvl.bg;
+        main.innerText = lvl.emoji;
+        
+        document.getElementById('level-num').innerText = lvl.tag;
+        document.getElementById('title').innerText = lvl.title;
+        document.getElementById('description').innerText = lvl.description;
+
+        const list = document.getElementById('option-list');
+        list.innerHTML = '';
+        lvl.options.forEach(opt => {
+            const b = document.createElement('button');
+            b.className = 'btn-opt';
+            b.innerText = opt.text;
+            b.onclick = () => showFeedback(opt);
+            list.appendChild(b);
+        });
+    }
+
+    function showFeedback(opt) {
+        const overlay = document.getElementById('overlay');
+        document.getElementById('overlay-title').innerText = opt.title;
+        document.getElementById('overlay-body').innerText = opt.body;
+        
+        const btn = document.getElementById('overlay-btn');
+        if(opt.result === 'success') {
+            btn.innerText = "进入下一阶段";
+            btn.className = "btn-action btn-next";
+            btn.onclick = () => {
+                document.getElementById(`med-${currentLevel+1}`).classList.add('unlocked');
+                currentLevel++;
+                if(currentLevel < levels.length) renderLevel();
+                else showVictory();
+            };
+        } else {
+            btn.innerText = "时间回溯，重新决策";
+            btn.className = "btn-action btn-retry";
+            btn.onclick = () => overlay.style.display = 'none';
+        }
+        overlay.style.display = 'flex';
+    }
+
+    function showVictory() {
+        const overlay = document.getElementById('overlay');
+        document.getElementById('visual-portal').style.background = "linear-gradient(135deg, #f59e0b 0%, #d97706 100%)";
+        document.getElementById('stage-main').innerText = "🌞";
+        document.getElementById('overlay-title').innerText = "文明领航员";
+        document.getElementById('overlay-body').innerText = "恭喜！你不仅修好了飞船，更是在荒岛上建立了一个基于理性、契约与自由的现代文明。启蒙之光，永不熄灭！";
+        document.getElementById('overlay-btn').innerText = "重新开始史诗任务";
+        document.getElementById('overlay-btn').onclick = () => location.reload();
+        overlay.style.display = 'flex';
+    }
+</script>
+
+</body>
+</html>

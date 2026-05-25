@@ -172,7 +172,6 @@ function App() {
       let yPos = margin;
       
       pdf.setFontSize(settings.fontSize);
-      pdf.setFont('SimSun', 'normal');
       
       items.forEach((item, idx) => {
         const text = item.extractedText;
@@ -196,25 +195,21 @@ function App() {
       });
       
       if (Capacitor.isNativePlatform()) {
-        const pdfBlob = pdf.output('blob');
-        const reader = new FileReader();
-        reader.onloadend = async () => {
-          try {
-            const base64data = reader.result.split(',')[1];
-            const fileName = `extracted_text_${new Date().getTime()}.pdf`;
-            await Filesystem.writeFile({
-              path: fileName,
-              data: base64data,
-              directory: Directory.Documents,
-              encoding: Encoding.UTF8,
-            });
-            alert(`PDF downloaded successfully!\nSaved to: ${fileName}`);
-          } catch (e) {
-            console.error('Error saving PDF:', e);
-            alert('Failed to save PDF: ' + (e.message || 'Unknown error'));
-          }
-        };
-        reader.readAsDataURL(pdfBlob);
+        try {
+          const pdfDataUri = pdf.output('datauristring');
+          const base64data = pdfDataUri.split(',')[1];
+          const fileName = `extracted_text_${new Date().getTime()}.pdf`;
+          await Filesystem.writeFile({
+            path: fileName,
+            data: base64data,
+            directory: Directory.Documents,
+            encoding: Encoding.UTF8,
+          });
+          alert(`PDF downloaded successfully!\nSaved to: ${fileName}`);
+        } catch (e) {
+          console.error('Error saving PDF:', e);
+          alert('Failed to save PDF: ' + (e.message || 'Unknown error'));
+        }
       } else {
         pdf.save('extracted_text.pdf');
       }

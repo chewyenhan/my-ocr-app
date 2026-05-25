@@ -5,6 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    base: './', // 👈 关键修改，确保 GitHub Pages 的路径相对化
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
