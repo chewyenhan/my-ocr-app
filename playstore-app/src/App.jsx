@@ -175,11 +175,9 @@ function App() {
       });
       html += '</div>';
       
-      // 关键：不能用 display:none，html2canvas 渲染不到隐藏元素 → 空白页
-      // off-screen 定位确保元素在 DOM 中可见（html2canvas 可渲染），但用户看不到
+      // html2pdf 需要真实的 DOM 元素（非字符串），且元素必须可渲染（非 display:none）
       const element = document.createElement('div');
       element.innerHTML = html;
-      element.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;';
       document.body.appendChild(element);
 
       const cleanup = () => { if (element.parentNode) document.body.removeChild(element); };
@@ -197,17 +195,16 @@ function App() {
       if (!pdfFileName) { cleanup(); return; }
       const finalPdfName = pdfFileName.endsWith('.pdf') ? pdfFileName : `${pdfFileName}.pdf`;
 
-      // 使用 .toPdf() 获取 jsPDF 实例，再 .output('arraybuffer') 确保二进制正确
-      html2pdf().set(opt).from(element).toPdf().then(async (pdf) => {
+      // html2pdf 链式 API：.toPdf().output(type) 直接返回指定格式的 Promise
+      // 不要用 .toPdf().then(pdf => pdf.output())——那时 pdf 可能是 undefined
+      html2pdf().set(opt).from(element).toPdf().output('arraybuffer').then(async (arrBuf) => {
         cleanup();
         if (Capacitor.isNativePlatform()) {
-          // 固定四步：arraybuffer → Uint8Array → 逐字节 binary → btoa(base64)
-          // 不传 encoding 参数，让 Capacitor 自动解码 base64 为二进制
-          const arrBuf = pdf.output('arraybuffer');
           const u8 = new Uint8Array(arrBuf);
           let bin = '';
           for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
           const base64 = btoa(bin);
+          // 不传 encoding → Capacitor 自动 base64→二进制解码
           const result = await Filesystem.writeFile({
             path: finalPdfName,
             data: base64,
@@ -215,7 +212,12 @@ function App() {
           });
           alert(`PDF downloaded!\nSaved to: ${result.uri || finalPdfName}`);
         } else {
-          pdf.save(finalPdfName);
+          // web 端直接用 Blob 下载
+          const blob = new Blob([arrBuf], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = finalPdfName; a.click();
+          URL.revokeObjectURL(url);
         }
       }).catch((err) => {
         cleanup();
