@@ -169,41 +169,32 @@ function App() {
     
     try {
       const ps = settings.pageSize === 'letter' ? 'letter' : 'a4';
-      let html = '<div style="font-family: \'Noto Sans SC\', Arial, sans-serif; padding: 20px; line-height: 1.8; color: #000;">';
+      // 添加明确的 width 和 background-color 防止 html2canvas 渲染 0 宽或透明背景导致白板/黑板
+      let html = '<div style="width: 800px; background-color: #ffffff; font-family: \'Noto Sans SC\', Arial, sans-serif; padding: 40px; line-height: 1.8; color: #000000;">';
       items.forEach((item, idx) => {
         html += '<div style="' + (settings.addPageBreak && idx > 0 ? 'page-break-before: always;' : '') + '">';
-        html += '<pre style="white-space: pre-wrap; font-size: ' + settings.fontSize + 'pt; font-family: \'Noto Sans SC\', monospace; margin: 0;">' + 
+        html += '<pre style="white-space: pre-wrap; word-wrap: break-word; font-size: ' + settings.fontSize + 'pt; font-family: \'Noto Sans SC\', monospace; margin: 0;">' + 
                 item.extractedText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre></div>';
       });
       html += '</div>';
       
-      const element = document.createElement('div');
-      element.innerHTML = html;
-      
-      // Fix for blank PDF: Needs to be attached to DOM but hidden off-screen
-      element.style.position = 'absolute';
-      element.style.left = '-9999px';
-      element.style.top = '-9999px';
-      document.body.appendChild(element);
-      
       const defaultPdfName = 'extracted_text';
       const pdfFileName = window.prompt('Enter PDF filename (without .pdf extension):', defaultPdfName);
-      if (!pdfFileName) {
-        document.body.removeChild(element);
-        return;
-      }
+      if (!pdfFileName) return;
       const finalPdfName = pdfFileName.endsWith('.pdf') ? pdfFileName : `${pdfFileName}.pdf`;
 
       const opt = {
         margin: 10,
         filename: finalPdfName,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
         jsPDF: { orientation: 'portrait', unit: 'mm', format: ps }
       };
       
       if (Capacitor.isNativePlatform()) {
-        html2pdf().set(opt).from(element).outputPdf('datauristring').then(async (pdfDataUri) => {
+        // 直接传入 html 字符串，避免 DOM 挂载和绝对定位引起的宽度塌陷陷阱
+        // 使用标准的 .output('datauristring') 获取 base64
+        html2pdf().set(opt).from(html).output('datauristring').then(async (pdfDataUri) => {
           try {
             const base64data = pdfDataUri.split(',')[1];
             const result = await Filesystem.writeFile({
@@ -211,20 +202,19 @@ function App() {
               data: base64data,
               directory: Directory.Documents,
             });
-            document.body.removeChild(element);
             alert(`PDF downloaded successfully!\nSaved to: ${result.uri || finalPdfName}`);
           } catch (e) {
-            document.body.removeChild(element);
             alert('Failed to save PDF: ' + e.message);
           }
+        }).catch(err => {
+          console.error("html2pdf generation error:", err);
+          alert('Failed to generate PDF: ' + err.message);
         });
       } else {
-        html2pdf().set(opt).from(element).save().then(() => {
-          document.body.removeChild(element);
-        });
+        html2pdf().set(opt).from(html).save();
       }
     } catch (e) {
-      alert('PDF generation failed: ' + e.message);
+      alert('PDF generation setup failed: ' + e.message);
     }
   }, [images, settings]);
 
