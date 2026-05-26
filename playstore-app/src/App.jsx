@@ -193,8 +193,8 @@ function App() {
       
       if (Capacitor.isNativePlatform()) {
         // 直接传入 html 字符串，避免 DOM 挂载和绝对定位引起的宽度塌陷陷阱
-        // 使用标准的 .output('datauristring') 获取 base64
-        html2pdf().set(opt).from(html).output('datauristring').then(async (pdfDataUri) => {
+        // 使用官方安全的 .outputPdf('datauristring') 获取 base64
+        html2pdf().set(opt).from(html).outputPdf('datauristring').then(async (pdfDataUri) => {
           try {
             const base64data = pdfDataUri.split(',')[1];
             const result = await Filesystem.writeFile({
