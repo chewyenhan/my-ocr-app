@@ -131,16 +131,19 @@ function App() {
   const downloadTxt = useCallback(async () => {
     const text = [...images].sort((a,b) => a.order - b.order).filter(i => i.status === 'success' && i.extractedText).map(i => i.extractedText).join('\n\n');
     if (!text) { alert('No extracted text to download.'); return; }
+    const defaultName = 'extracted_text';
+    const fileName = window.prompt('Enter filename (without .txt extension):', defaultName);
+    if (!fileName) return;
+    const finalName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
     if (Capacitor.isNativePlatform()) {
       try {
-        const fileName = `extracted_text_${new Date().getTime()}.txt`;
-        const result = await Filesystem.writeFile({
-          path: fileName,
+        await Filesystem.writeFile({
+          path: finalName,
           data: '﻿' + text,
           directory: Directory.Documents,
           encoding: Encoding.UTF8,
         });
-        alert(`File downloaded successfully!\nSaved to: ${result.uri}`);
+        alert(`File downloaded successfully!\nSaved to: ${finalName}`);
       } catch (e) {
         console.error('downloadTxt error:', e);
         alert('Download failed: ' + (e.message || 'Unknown error'));
@@ -150,7 +153,7 @@ function App() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'extracted_text.txt';
+      a.download = finalName;
       a.style.display = 'none';
       document.body.appendChild(a);
       a.click();
@@ -164,49 +167,57 @@ function App() {
     
     try {
       const ps = settings.pageSize === 'letter' ? 'letter' : 'a4';
-      let html = '<div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.8;">';
+      let html = '<div style="font-family: \'Noto Sans SC\', Arial, sans-serif; padding: 20px; line-height: 1.8; color: #000;">';
       items.forEach((item, idx) => {
         html += '<div style="' + (settings.addPageBreak && idx > 0 ? 'page-break-before: always;' : '') + '">';
-        html += '<pre style="white-space: pre-wrap; font-size: ' + settings.fontSize + 'pt;">' + 
+        html += '<pre style="white-space: pre-wrap; font-size: ' + settings.fontSize + 'pt; font-family: \'Noto Sans SC\', monospace; margin: 0;">' + 
                 item.extractedText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre></div>';
       });
       html += '</div>';
       
       const element = document.createElement('div');
       element.innerHTML = html;
+      element.style.display = 'none';
+      document.body.appendChild(element);
       
       const opt = {
-        margin: 10,
-        filename: 'extracted_text.pdf',
+        margin: [10, 10, 10, 10],
+        filename: `extracted_text_${new Date().getTime()}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
+        html2canvas: { scale: 2, useCORS: true, allowTaint: true },
         jsPDF: { orientation: 'portrait', unit: 'mm', format: ps }
       };
       
+      const defaultPdfName = 'extracted_text';
+      const pdfFileName = window.prompt('Enter PDF filename (without .pdf extension):', defaultPdfName);
+      if (!pdfFileName) {
+        document.body.removeChild(element);
+        return;
+      }
+      const finalPdfName = pdfFileName.endsWith('.pdf') ? pdfFileName : `${pdfFileName}.pdf`;
       if (Capacitor.isNativePlatform()) {
-        html2pdf().set(opt).from(element).toPdf().get('pdf').then(async (pdf) => {
+        html2pdf().set(opt).from(element).outputPdf('datauristring').then(async (pdfDataUri) => {
           try {
-            const pdfArrayBuffer = pdf.output('arraybuffer');
-            const uint8 = new Uint8Array(pdfArrayBuffer);
-            let binary = '';
-            for (let i = 0; i < uint8.length; i++) {
-              binary += String.fromCharCode(uint8[i]);
-            }
-            const base64data = btoa(binary);
-            const fileName = `extracted_text_${new Date().getTime()}.pdf`;
+            const base64data = pdfDataUri.split(',')[1];
             await Filesystem.writeFile({
-              path: fileName,
+              path: finalPdfName,
               data: base64data,
               directory: Directory.Documents,
-              encoding: Encoding.UTF8,
             });
-            alert(`PDF downloaded successfully!\nSaved to: ${fileName}`);
+            document.body.removeChild(element);
+            alert(`PDF downloaded successfully!\nSaved to: ${finalPdfName}`);
           } catch (e) {
+            document.body.removeChild(element);
             alert('Failed to save PDF: ' + e.message);
           }
         });
       } else {
-        html2pdf().set(opt).from(element).save();
+        html2pdf().set(opt).from(element).save(finalPdfName).then(() => {
+          document.body.removeChild(element);
+        }).catch((err) => {
+          document.body.removeChild(element);
+          console.error('PDF save error:', err);
+        });
       }
     } catch (e) {
       alert('PDF generation failed: ' + e.message);
