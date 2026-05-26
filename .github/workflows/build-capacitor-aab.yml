@@ -11,12 +11,18 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: true
 
-      - name: Copy keystore
+      - name: Generate keystore
         run: |
-          cp github-pages-app/snaptext-signing.keystore capacitor-android/release.keystore
+          cd capacitor-android
+          keytool -genkey -v \
+            -keystore release.keystore \
+            -alias snaptext \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android123 \
+            -keypass android123 \
+            -dname "CN=Snaptext" 2>/dev/null
+          cp release.keystore ../snaptext-release.keystore
 
       - name: Build AAB
         working-directory: capacitor-android
@@ -32,6 +38,7 @@ jobs:
         run: |
           mkdir -p output
           find capacitor-android -name "*.aab" -exec cp {} output/ \; 2>/dev/null
+          cp snaptext-release.keystore output/ 2>/dev/null
           ls -la output/
 
       - name: Upload AAB
