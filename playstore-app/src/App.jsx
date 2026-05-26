@@ -131,21 +131,19 @@ function App() {
   const downloadTxt = useCallback(async () => {
     const text = [...images].sort((a,b) => a.order - b.order).filter(i => i.status === 'success' && i.extractedText).map(i => i.extractedText).join('\n\n');
     if (!text) { alert('No extracted text to download.'); return; }
-    
     const defaultName = 'extracted_text';
     const fileName = window.prompt('Enter filename (without .txt extension):', defaultName);
     if (!fileName) return;
     const finalName = fileName.endsWith('.txt') ? fileName : `${fileName}.txt`;
-
     if (Capacitor.isNativePlatform()) {
       try {
-        const result = await Filesystem.writeFile({
+        await Filesystem.writeFile({
           path: finalName,
           data: '﻿' + text,
           directory: Directory.Documents,
           encoding: Encoding.UTF8,
         });
-        alert(`File downloaded successfully!\nSaved to: ${result.uri}`);
+        alert(`File downloaded successfully!\nSaved to: ${finalName}`);
       } catch (e) {
         console.error('downloadTxt error:', e);
         alert('Download failed: ' + (e.message || 'Unknown error'));
@@ -169,52 +167,63 @@ function App() {
     
     try {
       const ps = settings.pageSize === 'letter' ? 'letter' : 'a4';
-      // 添加明确的 width 和 background-color 防止 html2canvas 渲染 0 宽或透明背景导致白板/黑板
-      let html = '<div style="width: 800px; background-color: #ffffff; font-family: \'Noto Sans SC\', Arial, sans-serif; padding: 40px; line-height: 1.8; color: #000000;">';
+      let html = '<div style="font-family: \'Noto Sans SC\', Arial, sans-serif; padding: 20px; line-height: 1.8; color: #000;">';
       items.forEach((item, idx) => {
         html += '<div style="' + (settings.addPageBreak && idx > 0 ? 'page-break-before: always;' : '') + '">';
-        html += '<pre style="white-space: pre-wrap; word-wrap: break-word; font-size: ' + settings.fontSize + 'pt; font-family: \'Noto Sans SC\', monospace; margin: 0;">' + 
+        html += '<pre style="white-space: pre-wrap; font-size: ' + settings.fontSize + 'pt; font-family: \'Noto Sans SC\', monospace; margin: 0;">' + 
                 item.extractedText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre></div>';
       });
       html += '</div>';
       
-      const defaultPdfName = 'extracted_text';
-      const pdfFileName = window.prompt('Enter PDF filename (without .pdf extension):', defaultPdfName);
-      if (!pdfFileName) return;
-      const finalPdfName = pdfFileName.endsWith('.pdf') ? pdfFileName : `${pdfFileName}.pdf`;
+      // 关键：不能用 display:none，html2canvas 渲染不到隐藏元素 → 空白页
+      // off-screen 定位确保元素在 DOM 中可见（html2canvas 可渲染），但用户看不到
+      const element = document.createElement('div');
+      element.innerHTML = html;
+      element.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;';
+      document.body.appendChild(element);
+
+      const cleanup = () => { if (element.parentNode) document.body.removeChild(element); };
 
       const opt = {
         margin: 10,
-        filename: finalPdfName,
+        filename: 'extracted_text.pdf',
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+        html2canvas: { scale: 2, useCORS: true },
         jsPDF: { orientation: 'portrait', unit: 'mm', format: ps }
       };
-      
-      if (Capacitor.isNativePlatform()) {
-        // 直接传入 html 字符串，避免 DOM 挂载和绝对定位引起的宽度塌陷陷阱
-        // 使用官方安全的 .outputPdf('datauristring') 获取 base64
-        html2pdf().set(opt).from(html).outputPdf('datauristring').then(async (pdfDataUri) => {
-          try {
-            const base64data = pdfDataUri.split(',')[1];
-            const result = await Filesystem.writeFile({
-              path: finalPdfName,
-              data: base64data,
-              directory: Directory.Documents,
-            });
-            alert(`PDF downloaded successfully!\nSaved to: ${result.uri || finalPdfName}`);
-          } catch (e) {
-            alert('Failed to save PDF: ' + e.message);
-          }
-        }).catch(err => {
-          console.error("html2pdf generation error:", err);
-          alert('Failed to generate PDF: ' + err.message);
-        });
-      } else {
-        html2pdf().set(opt).from(html).save();
-      }
+
+      const defaultPdfName = 'extracted_text';
+      const pdfFileName = window.prompt('Enter PDF filename (without .pdf extension):', defaultPdfName);
+      if (!pdfFileName) { cleanup(); return; }
+      const finalPdfName = pdfFileName.endsWith('.pdf') ? pdfFileName : `${pdfFileName}.pdf`;
+
+      // 使用 .toPdf() 获取 jsPDF 实例，再 .output('arraybuffer') 确保二进制正确
+      html2pdf().set(opt).from(element).toPdf().then(async (pdf) => {
+        cleanup();
+        if (Capacitor.isNativePlatform()) {
+          // 固定四步：arraybuffer → Uint8Array → 逐字节 binary → btoa(base64)
+          // 不传 encoding 参数，让 Capacitor 自动解码 base64 为二进制
+          const arrBuf = pdf.output('arraybuffer');
+          const u8 = new Uint8Array(arrBuf);
+          let bin = '';
+          for (let i = 0; i < u8.length; i++) bin += String.fromCharCode(u8[i]);
+          const base64 = btoa(bin);
+          const result = await Filesystem.writeFile({
+            path: finalPdfName,
+            data: base64,
+            directory: Directory.Documents,
+          });
+          alert(`PDF downloaded!\nSaved to: ${result.uri || finalPdfName}`);
+        } else {
+          pdf.save(finalPdfName);
+        }
+      }).catch((err) => {
+        cleanup();
+        console.error('PDF error:', err);
+        alert('PDF failed: ' + (err.message || 'Unknown error'));
+      });
     } catch (e) {
-      alert('PDF generation setup failed: ' + e.message);
+      alert('PDF generation failed: ' + e.message);
     }
   }, [images, settings]);
 

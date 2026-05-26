@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0f19" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Snaptext: Batch Photo OCR</title>
+    <meta name="description" content="Snaptext: Batch Photo OCR - Take multiple photos, extract all text at once with Gemini AI. One-time purchase. No subscription. BYO API key." />
+    <link rel="icon" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <script>
+      if (!location.hostname.includes('localhost') && !location.hostname.includes('capacitor') && !sessionStorage.getItem('app_opened') && !window.Capacitor && !document.referrer.includes('android-app://') && !window.matchMedia('(display-mode: standalone)').matches) {
+        sessionStorage.setItem('app_opened', '1');
+        location.replace('./blocked.html');
+      }
+    </script>
+    <script type="module" crossorigin src="/src/main.jsx"></script>
+    <link rel="stylesheet" crossorigin href="/src/index.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
