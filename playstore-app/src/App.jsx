@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
-import { jsPDF } from 'jspdf';
+import html2pdf from 'html2pdf.js';
 import './i18n/index.js';
 
 const GEMINI_API = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
@@ -159,63 +159,57 @@ function App() {
   }, [images]);
 
   const printToPdf = useCallback(async () => {
-    const pageSize = settings.pageSize === 'letter' ? 'letter' : 'a4';
     const items = [...images].sort((a,b) => a.order - b.order).filter(i => i.status === 'success' && i.extractedText);
     if (!items.length) { alert('No extracted text to export.'); return; }
     
     try {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: pageSize });
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const margin = 20;
-      const contentWidth = pageWidth - 2 * margin;
-      let yPos = margin;
-      
-      pdf.setFontSize(settings.fontSize);
-      
+      const ps = settings.pageSize === 'letter' ? 'letter' : 'a4';
+      let html = '<div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.8;">';
       items.forEach((item, idx) => {
-        const text = item.extractedText;
-        const lines = pdf.splitTextToSize(text, contentWidth);
-        
-        lines.forEach((line) => {
-          if (yPos + 7 > pageHeight - margin) {
-            if (settings.addPageBreak) pdf.addPage();
-            yPos = margin;
-          }
-          pdf.text(line, margin, yPos);
-          yPos += 7;
-        });
-        
-        if (settings.addPageBreak && idx < items.length - 1) {
-          pdf.addPage();
-          yPos = margin;
-        } else if (idx < items.length - 1) {
-          yPos += 5;
-        }
+        html += '<div style="' + (settings.addPageBreak && idx > 0 ? 'page-break-before: always;' : '') + '">';
+        html += '<pre style="white-space: pre-wrap; font-size: ' + settings.fontSize + 'pt;">' + 
+                item.extractedText.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre></div>';
       });
+      html += '</div>';
+      
+      const element = document.createElement('div');
+      element.innerHTML = html;
+      
+      const opt = {
+        margin: 10,
+        filename: 'extracted_text.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { orientation: 'portrait', unit: 'mm', format: ps }
+      };
       
       if (Capacitor.isNativePlatform()) {
-        try {
-          const pdfDataUri = pdf.output('datauristring');
-          const base64data = pdfDataUri.split(',')[1];
-          const fileName = `extracted_text_${new Date().getTime()}.pdf`;
-          await Filesystem.writeFile({
-            path: fileName,
-            data: base64data,
-            directory: Directory.Documents,
-            encoding: Encoding.UTF8,
-          });
-          alert(`PDF downloaded successfully!\nSaved to: ${fileName}`);
-        } catch (e) {
-          console.error('Error saving PDF:', e);
-          alert('Failed to save PDF: ' + (e.message || 'Unknown error'));
-        }
+        html2pdf().set(opt).from(element).toPdf().get('pdf').then(async (pdf) => {
+          try {
+            const pdfArrayBuffer = pdf.output('arraybuffer');
+            const uint8 = new Uint8Array(pdfArrayBuffer);
+            let binary = '';
+            for (let i = 0; i < uint8.length; i++) {
+              binary += String.fromCharCode(uint8[i]);
+            }
+            const base64data = btoa(binary);
+            const fileName = `extracted_text_${new Date().getTime()}.pdf`;
+            await Filesystem.writeFile({
+              path: fileName,
+              data: base64data,
+              directory: Directory.Documents,
+              encoding: Encoding.UTF8,
+            });
+            alert(`PDF downloaded successfully!\nSaved to: ${fileName}`);
+          } catch (e) {
+            alert('Failed to save PDF: ' + e.message);
+          }
+        });
       } else {
-        pdf.save('extracted_text.pdf');
+        html2pdf().set(opt).from(element).save();
       }
     } catch (e) {
-      console.error('printToPdf error:', e);
-      alert('PDF generation failed: ' + (e.message || 'Unknown error'));
+      alert('PDF generation failed: ' + e.message);
     }
   }, [images, settings]);
 
