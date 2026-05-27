@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.chewyenhan.twa",
+        "sha256_cert_fingerprints": ["D2:00:FF:7A:B8:01:DB:B0:F2:98:E6:38:D6:94:1D:42:E3:7D:A1:BB:67:5E:D5:95:F7:7F:11:25:18:32:92:E2"]
+      }
+    }]

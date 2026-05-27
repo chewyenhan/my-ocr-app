@@ -1,0 +1,19 @@
+{
+  "packageId": "com.chewyenhan.snaptextocr",
+  "host": "chewyenhan.github.io",
+  "name": "Snaptext OCR - 批量拍照提取文字",
+  "shortName": "Snaptext OCR",
+  "themeColor": "#0f172a",
+  "backgroundColor": "#0f172a",
+  "startUrl": "https://chewyenhan.github.io/my-ocr-app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "iconUrl": "https://chewyenhan.github.io/my-ocr-app/assets/icon-512.png",
+  "maskableIconUrl": "https://chewyenhan.github.io/my-ocr-app/assets/icon-512.png",
+  "splashScreenFadeOutDuration": 300,
+  "enableNotifications": false,
+  "signingKey": {
+    "path": "./android.keystore",
+    "alias": "snaptext"
+  }
+}

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Snaptext</string>
+    <string name="title_activity_main">Snaptext</string>
+    <string name="package_name">com.chewyenhan.snaptextocr</string>
+    <string name="custom_url_scheme">com.chewyenhan.snaptextocr</string>
+</resources>
