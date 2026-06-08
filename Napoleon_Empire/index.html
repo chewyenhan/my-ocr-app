@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>拿破仑：法兰西的荣光与倾覆</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="custom-toast"></div>
+
+<div id="vol-ctrl">
+    <div class="vol-item">📣 语音: <input type="range" id="vol-speech" min="0" max="1" step="0.1" value="1.0"></div>
+    <div class="vol-item">🥁 背景音乐: <input type="range" id="vol-drum" min="0" max="1" step="0.05" value="0.2"></div>
+</div>
+
+<div id="p-start" class="panel active" style="text-align: center; justify-content: center; background: #0c1424; border: 15px solid #c9a44c; border-style: ridge; position: relative; overflow: hidden;">
+    <div style="position: absolute; top:0; left:0; width:100%; height:100%; z-index:0; opacity: 0.3; pointer-events: none;">
+        <img src="assets/start_bg.png" style="width:100%; height:100%; object-fit: cover;">
+    </div>
+    
+    <div style="position: relative; z-index:10; width: 100%;">
+        <div style="margin-bottom: 20px;">
+            <h1 style="color: #c9a44c; font-size: 5em; text-shadow: 4px 4px 8px #000;">拿破仑：法兰西的荣光与倾覆</h1>
+            <h2 style="color: #f4ecd8; font-size: 2.5em; text-shadow: 2px 2px 4px #000;">— 历史的辉煌与选择 —</h2>
+        </div>
+        
+        <div id="api-setup" style="margin: 20px auto; background: rgba(0,0,0,0.6); padding: 20px; border-radius: 15px; width: 80%; border: 2px solid #c9a44c;">
+            <p style="color: #c9a44c; font-size: 1.5em; margin: 0 0 10px 0;">🔌 外接 API 设置 (AI 历史结局点评必需)</p>
+            <input type="password" id="api-key-input" class="group-input" style="font-size: 1.2em; width: 70%; padding: 10px; margin-bottom: 10px;" placeholder="在此输入 Gemini API Key">
+            <br>
+            <button class="sys-btn" style="font-size: 1.2em; padding: 10px 20px; width: auto; background: #c9a44c; color: #0c1424; border-color: #f4ecd8;" onclick="detectModels()">🔍 检测并加载模型</button>
+            <br>
+            <select id="model-select" class="group-input" style="font-size: 1.2em; width: 70%; padding: 10px; margin-top: 10px; display: none; background: #fff; color: #000;"></select>
+        </div>
+
+        <div style="display: flex; justify-content: center; gap: 20px; margin-top: 20px;">
+            <button class="sys-btn" style="background: #8b1c1c; color: #f4ecd8; font-size: 2.5em; height: 120px; padding: 0 40px; text-shadow: none;" onclick="initAll()">⚔️ 帝国远征 ⚔️</button>
+            <button class="sys-btn" style="background: #1a2538; color: #c9a44c; font-size: 1.5em; height: 120px; width: 250px; border-color: #c9a44c;" onclick="toggleModal(true)">📜 游戏指南<br>& 历史背景</button>
+        </div>
+    </div>
+</div>
+
+<div id="guide-modal" class="modal-overlay" onclick="if(event.target==this) toggleModal(false)">
+    <div class="modal-content">
+        <button class="modal-close" onclick="toggleModal(false)">关闭 ✖</button>
+        <h3>⚔️ 拿破仑：法兰西的荣光与倾覆 —— 游戏指南</h3>
+        <hr>
+        <p><b>📚 核心考点：</b><br>
+            <ul>
+                <li><b>拿破仑法典</b>：将大革命自由及平等精神纳入法典。</li>
+                <li><b>大陆封锁政策</b>：禁止欧洲大陆各国与英国通商。</li>
+                <li><b>远征俄国</b>：1812年，遭遇俄军“坚壁清野”，几乎全军覆没。</li>
+                <li><b>民族革命浪潮</b>：法国大革命思想引发了欧洲争取独立的民族革命。</li>
+            </ul>
+        </p>
+    </div>
+</div>
+
+<div id="p-setup" class="panel">
+    <h2>设定玩家数量</h2>
+    <div style="text-align: center; margin-top: 50px;">
+        <p style="font-size: 2em; color: #c9a44c;">有多少位玩家准备见证帝国的兴衰：</p>
+        <input type="number" id="g-count" value="3" class="group-input"><br><br>
+        <button class="sys-btn" onclick="goNaming()">下一步：输入名称</button>
+    </div>
+</div>
+
+<div id="p-naming" class="panel">
+    <h2>玩家名录</h2>
+    <div id="name-container" style="flex-grow: 1; overflow-y: auto; padding: 20px;"></div>
+    <button class="sys-btn" onclick="saveGroups()">进入欧洲版图</button>
+</div>
+
+<div id="p-menu" class="panel">
+    <h2>🗺️ 法兰西第一帝国版图</h2>
+    <div id="group-list" style="flex-grow: 1; overflow-y: auto;"></div>
+</div>
+
+<div id="p-game" class="panel">
+    <div id="status-bar">
+        <span id="show-gname">玩家</span>
+        <span id="show-stat">状态</span>
+    </div>
+    <div id="scene-img-area" style="text-align: center; margin-bottom: 10px;"></div>
+    <div id="story-text">加载中...</div>
+    <div id="choices-area"></div>
+    <div id="ai-chat-area" style="display: none; flex-direction: column; height: 100%; flex-grow: 1;">
+        <div id="chat-history" style="flex-grow: 1; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; overflow-y: auto; margin-bottom: 10px;"></div>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="chat-input" class="group-input" style="flex-grow: 1; font-size: 1.2em; padding: 10px;" placeholder="在此输入你的策略...">
+            <button class="sys-btn" onclick="sendChat()" style="width: auto; padding: 10px 20px;">发言</button>
+        </div>
+    </div>
+    <button id="end-btn" class="sys-btn" style="display: none;" onclick="returnToMenu()">返回版图</button>
+</div>
+
+<!-- 脚本引用 -->
+<script src="story.js"></script>
+<script src="game.js"></script>
+
+</body>
+</html>
