@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>北美特使：外交博弈 (竞赛增强版)</title>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { background-color: #f1f5f9; font-family: system-ui, -apple-system, sans-serif; }
+        .game-card { border-radius: 3rem; box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.2); border: 2px solid rgba(255,255,255,0.4); }
+        .group-tab-active { background-color: #1e293b; color: white; transform: translateY(-4px); }
+        .victory-gradient { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); }
+        .score-bar { transition: width 1s ease-out; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const App = () => {
+            const [apiKey, setApiKey] = useState("");
+            const [availableModels, setAvailableModels] = useState(["gemini-1.5-flash", "gemini-1.5-pro"]);
+            const [selectedModel, setSelectedModel] = useState("gemini-1.5-flash");
+            const [isCheckingModels, setIsCheckingModels] = useState(false);
+            const [showSettings, setShowSettings] = useState(false);
+            const [errorMsg, setErrorMsg] = useState("");
+
+            const [groupCount, setGroupCount] = useState(1);
+            const [activeGroupId, setActiveGroupId] = useState(0);
+            const [groupsData, setGroupsData] = useState([]);
+            const [gameState, setGameState] = useState('setup'); // setup -> naming -> start -> chatting -> ... -> summary
+            const [target, setTarget] = useState(null);
+            const [input, setInput] = useState("");
+            const [reply, setReply] = useState("");
+            
+            const audioRef = useRef(null);
+            const [isAudioLoading, setIsAudioLoading] = useState(false);
+
+            const characters = [
+                { id: 'uk', name: "英国税务官", icon: "💂", voice: "Puck", context: "你坚持议会对殖民地拥有绝对课税权。你认为‘虚拟代表制’已经足够。任何拒绝纳税的行为都是对王室的严重叛乱。", hint: "他代表大英帝国的最高权威。在权利与秩序之间，是否有达成共识的空间？" },
+                { id: 'france', name: "路易十六", icon: "👑", voice: "Charon", context: "你是法兰西王国的君主。你正密切关注着北美局势与大英帝国的动向。你的一举一动都关乎欧洲权力的天平。", hint: "什么样的筹码才能撬动他的决策？他只看重地缘政治与核心利益。" },
+                { id: 'merchant', name: "波士顿商人", icon: "⚖️", voice: "Kore", context: "你是一名波士顿的中间商。战争对生意是毁灭性的，但高额的税收和垄断同样令人窒息。", hint: "他在乎生存、法律、秩序以及未来的生计。如何说服他站在你这边？" }
+            ];
+
+            // 第一步：初始化组别基础数据
+            const startNaming = () => {
+                const initialData = Array.from({ length: groupCount }, (_, i) => ({
+                    id: i,
+                    name: `第 ${i+1} 组`,
+                    health: 3,
+                    money: 50,
+                    morale: 50,
+                    support: 0, // 这里的 support 即为分数值
+                    status: 'start',
+                    lastReply: ""
+                }));
+                setGroupsData(initialData);
+                setGameState('naming');
+            };
+
+            // 第二步：完成命名后开始游戏
+            const finishSetup = () => {
+                setGameState('start');
+            };
+
+            const updateActiveGroup = (updates) => {
+                setGroupsData(prev => prev.map(g => g.id === activeGroupId ? { ...g, ...updates } : g));
+            };
+
+            const currentGroup = groupsData[activeGroupId] || {};
+
+            const fetchModels = async () => {
+                if (!apiKey) { setErrorMsg("请先输入 API Key 再检测"); return; }
+                setIsCheckingModels(true);
+                setErrorMsg("");
+                try {
+                    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+                    const data = await resp.json();
+                    if (data.models) {
+                        const models = data.models.filter(m => m.supportedGenerationMethods.includes("generateContent")).map(m => m.name.replace("models/", ""));
+                        setAvailableModels(models);
+                        setSelectedModel(models.find(m => m.includes("flash")) || models[0]);
+                    }
+                } catch (e) { setErrorMsg("检测失败"); }
+                finally { setIsCheckingModels(false); }
+            };
+
+            const pcmToWav = (pcmBase64, sampleRate = 24000) => {
+                const binaryString = window.atob(pcmBase64);
+                const bytes = new Uint8Array(binaryString.length);
+                for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+                const buffer = new ArrayBuffer(44 + bytes.length);
+                const view = new DataView(buffer);
+                const writeString = (os, s) => { for (let i = 0; i < s.length; i++) view.setUint8(os + i, s.charCodeAt(i)); };
+                writeString(0, 'RIFF'); view.setUint32(4, 36 + bytes.length, true);
+                writeString(8, 'WAVE'); writeString(12, 'fmt ');
+                view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+                view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true);
+                view.setUint16(34, 16, true); writeString(36, 'data');
+                view.setUint32(40, bytes.length, true);
+                for (let i = 0; i < bytes.length; i++) view.setUint8(44 + i, bytes[i]);
+                return new Blob([buffer], { type: 'audio/wav' });
+            };
+
+            const playVoice = async (text, voiceName) => {
+                if (!apiKey) return;
+                setIsAudioLoading(true);
+                try {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: `${voiceName}: ${text}` }] }],
+                            generationConfig: { responseModalities: ["AUDIO"], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName } } } }
+                        })
+                    });
+                    const result = await response.json();
+                    const pcmData = result.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                    if (pcmData) {
+                        const wavBlob = pcmToWav(pcmData);
+                        if (audioRef.current) { audioRef.current.src = URL.createObjectURL(wavBlob); audioRef.current.play(); }
+                    }
+                } catch (e) {} finally { setIsAudioLoading(false); }
+            };
+
+            const handleTalk = async () => {
+                if (!input.trim() || !apiKey) return;
+                setGameState('loading');
+                
+                let conditionRules = "";
+                if (target.id === 'uk') {
+                    conditionRules = "【强制指令】：无论玩家说什么（即便妥协或投降），谈判必须失败。你必须输出 \"success\": false。展现你绝对不让步的强硬和傲慢。";
+                } else if (target.id === 'france') {
+                    conditionRules = "【谈判成功条件】：难度极高。你只看重利益。除非玩家提出削弱英国、复仇或实质贸易利益，否则失败判定（\"success\": false）。";
+                } else if (target.id === 'merchant') {
+                    conditionRules = "【谈判成功条件】：难度极高。你只在乎利润。除非玩家提供商业保障或走私渠道，否则失败判定（\"success\": false）。";
+                }
+
+                const systemPrompt = `你是1775年的${target.name}。${target.context}。${conditionRules} 必须输出 JSON: {"reply": "回复的话", "success": true/false, "impact": {"money": 数字, "morale": 数字, "support": 数字}}`;
+                
+                try {
+                    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            contents: [{ parts: [{ text: input }] }],
+                            systemInstruction: { parts: [{ text: systemPrompt }] },
+                            generationConfig: { responseMimeType: "application/json" }
+                        })
+                    });
+                    const result = await resp.json();
+                    const data = JSON.parse(result.candidates[0].content.parts[0].text);
+                    setReply(data.reply);
+                    
+                    const isSuccess = data.success === true;
+                    const newHealth = isSuccess ? currentGroup.health : currentGroup.health - 1;
+                    // 谈判成功则增加 3% 支持度/分数
+                    const bonusScore = isSuccess ? 3 : 0;
+
+                    const nextStatus = isSuccess ? 'win' : (newHealth <= 0 ? 'gameover' : 'result');
+
+                    updateActiveGroup({
+                        money: Math.max(0, currentGroup.money + (data.impact?.money || 0)),
+                        morale: Math.max(0, currentGroup.morale + (data.impact?.morale || 0)),
+                        support: Math.min(100, currentGroup.support + bonusScore),
+                        health: newHealth,
+                        status: nextStatus,
+                        lastReply: data.reply
+                    });
+                    
+                    playVoice(data.reply, target.voice);
+                    setGameState(nextStatus);
+                } catch (e) {
+                    setGameState('result');
+                    setReply("（历史时空不稳定，请重试）");
+                }
+            };
+
+            const getCoolName = (score) => {
+                if (score >= 10) return "外交战神";
+                if (score >= 6) return "开国功勋";
+                if (score >= 3) return "北美新星";
+                return "倔强平民";
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col font-sans text-slate-900">
+                    <nav className="bg-slate-900 text-white p-6 flex justify-between items-center shadow-2xl sticky top-0 z-50">
+                        <div className="flex items-center space-x-4">
+                            <span className="text-4xl">📜</span>
+                            <span className="text-3xl font-black tracking-tight">北美特使：外交博弈</span>
+                        </div>
+                        <div className="flex items-center space-x-4">
+                            {!['setup', 'naming', 'summary'].includes(gameState) && (
+                                <div className="bg-yellow-500 text-slate-900 px-6 py-2 rounded-full font-black text-xl mr-4">
+                                    当前：{currentGroup.name}
+                                </div>
+                            )}
+                            <button onClick={() => setShowSettings(!showSettings)} className="text-xl p-3 hover:bg-slate-700 rounded-2xl transition-all">
+                                {showSettings ? "关闭设置 ✖" : "⚙️ 设置系统"}
+                            </button>
+                        </div>
+                    </nav>
+
+                    {showSettings && (
+                        <div className="bg-white border-b-4 p-8 shadow-2xl animate-in slide-in-from-top duration-300">
+                            <div className="max-w-5xl mx-auto space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-end">
+                                    <div className="md:col-span-2">
+                                        <label className="block text-lg font-bold text-slate-500 uppercase mb-3">1. 输入 API Key</label>
+                                        <input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} className="w-full p-4 bg-slate-50 border-4 border-slate-100 rounded-2xl outline-none focus:border-blue-500 text-xl"/>
+                                    </div>
+                                    <button onClick={fetchModels} className="h-16 bg-slate-800 text-white rounded-2xl font-bold text-xl hover:bg-black transition-all">
+                                        {isCheckingModels ? "检测中..." : "检测模型"}
+                                    </button>
+                                </div>
+                                {availableModels.length > 0 && (
+                                    <select value={selectedModel} onChange={e => setSelectedModel(e.target.value)} className="w-full p-4 bg-slate-50 border-4 border-slate-100 rounded-2xl text-xl">
+                                        {availableModels.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {!['setup', 'naming', 'summary'].includes(gameState) && (
+                        <div className="bg-slate-200 p-2 flex space-x-2 overflow-x-auto">
+                            {groupsData.map((g, idx) => (
+                                <button key={idx} onClick={() => { setActiveGroupId(idx); setGameState(g.status); setReply(g.lastReply); }}
+                                    className={`px-6 py-3 rounded-t-xl font-bold transition-all whitespace-nowrap ${activeGroupId === idx ? 'group-tab-active' : 'bg-slate-300 text-slate-600 hover:bg-slate-400'}`}>
+                                    {g.name} {g.health <= 0 ? '❌' : ''}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    <main className="flex-1 max-w-6xl mx-auto w-full p-6">
+                        {/* 状态看板 */}
+                        {!['setup', 'naming', 'summary'].includes(gameState) && (
+                            <div className="flex justify-between items-center mb-8 p-8 bg-white rounded-[3rem] shadow-md border-2 border-slate-100">
+                                <div className="flex space-x-12">
+                                    <div className="flex flex-col"><span className="text-sm text-slate-400 font-bold">资金</span><div className="text-3xl font-black">💰 {currentGroup.money}</div></div>
+                                    <div className="flex flex-col"><span className="text-sm text-slate-400 font-bold">士气</span><div className="text-3xl font-black">🛡️ {currentGroup.morale}</div></div>
+                                    <div className="flex flex-col"><span className="text-sm text-slate-400 font-bold">谈判进度/总分</span><div className="text-3xl font-black text-blue-600">📊 {currentGroup.support}%</div></div>
+                                </div>
+                                <div className="flex flex-col items-end">
+                                    <span className="text-sm text-slate-400 font-bold mb-1">机会</span>
+                                    <div className="flex space-x-2 text-4xl">
+                                        {[...Array(3)].map((_, i) => <span key={i}>{i < currentGroup.health ? "❤️" : "💔"}</span>)}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="bg-white game-card min-h-[600px] flex flex-col overflow-hidden relative border-4">
+                            
+                            {/* 场景 1: 设置组数 */}
+                            {gameState === 'setup' && (
+                                <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+                                    <h2 className="text-5xl font-black mb-12">第一步：配置竞赛规模</h2>
+                                    <div className="bg-slate-50 p-12 rounded-[4rem] border-4 border-slate-100 shadow-xl w-full max-w-xl">
+                                        <label className="block text-2xl font-bold text-slate-600 mb-8">参与组别数量</label>
+                                        <div className="flex items-center justify-center space-x-8 mb-12">
+                                            <button onClick={() => setGroupCount(Math.max(1, groupCount - 1))} className="text-5xl bg-white w-20 h-20 rounded-full shadow-lg border-2 hover:bg-slate-100">－</button>
+                                            <span className="text-7xl font-black text-blue-600">{groupCount}</span>
+                                            <button onClick={() => setGroupCount(Math.min(10, groupCount + 1))} className="text-5xl bg-white w-20 h-20 rounded-full shadow-lg border-2 hover:bg-slate-100">＋</button>
+                                        </div>
+                                        <button onClick={startNaming} className="w-full bg-slate-900 text-white py-6 rounded-full font-black text-3xl shadow-xl hover:scale-105 transition-all">下一步：输入队名</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 场景 2: 输入队名 */}
+                            {gameState === 'naming' && (
+                                <div className="flex-1 flex flex-col p-12 overflow-y-auto">
+                                    <h2 className="text-5xl font-black mb-8 text-center">第二步：战队起名</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto w-full mb-12">
+                                        {groupsData.map((g, idx) => (
+                                            <div key={idx} className="flex flex-col space-y-2">
+                                                <label className="font-bold text-slate-400 px-4">第 {idx+1} 组名称</label>
+                                                <input 
+                                                    type="text" 
+                                                    placeholder="输入炫酷的队名..."
+                                                    value={g.name}
+                                                    onChange={e => {
+                                                        const newName = e.target.value;
+                                                        setGroupsData(prev => prev.map(item => item.id === idx ? {...item, name: newName} : item));
+                                                    }}
+                                                    className="p-4 bg-slate-50 border-4 border-slate-100 rounded-2xl text-xl outline-none focus:border-blue-500"
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="text-center">
+                                        <button onClick={finishSetup} className="px-24 py-6 bg-blue-600 text-white rounded-full font-black text-3xl shadow-2xl hover:bg-blue-700">开始博弈</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 场景 3: 选择对手 */}
+                            {gameState === 'start' && (
+                                <div className="flex-1 flex flex-col p-12">
+                                    <h2 className="text-4xl font-black text-slate-800 mb-8 text-center">请 {currentGroup.name} 选择谈判对手</h2>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+                                        {characters.map(c => (
+                                            <button key={c.id} onClick={() => setTarget(c)} className={`p-8 rounded-[3rem] border-4 transition-all ${target?.id === c.id ? 'border-slate-900 bg-blue-50 scale-105 shadow-xl' : 'border-slate-100 bg-slate-50 hover:bg-slate-100'}`}>
+                                                <div className="text-7xl mb-4">{c.icon}</div>
+                                                <div className="text-2xl font-black text-slate-700 mb-2">{c.name}</div>
+                                                {target?.id === c.id && <p className="text-left text-sm text-slate-500 italic">{c.hint}</p>}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <button disabled={!target} onClick={() => { setGameState('chatting'); updateActiveGroup({ status: 'chatting' }); }} className="w-full bg-slate-900 text-white py-6 rounded-full font-black text-3xl shadow-xl disabled:bg-slate-100">代表本组开始谈判</button>
+                                </div>
+                            )}
+
+                            {/* 场景 4: 聊天中 */}
+                            {gameState === 'chatting' && (
+                                <div className="flex-1 flex flex-col p-12">
+                                    <div className="flex items-center space-x-6 mb-6 p-6 bg-slate-50 rounded-[2.5rem] border-2 border-slate-100 shadow-inner">
+                                        <div className="text-7xl">{target.icon}</div>
+                                        <div className="flex-1">
+                                            <h3 className="text-2xl font-black text-slate-800">{target.name}</h3>
+                                            <p className="text-slate-500 italic">正在等待 {currentGroup.name} 的提议...</p>
+                                        </div>
+                                    </div>
+                                    <textarea value={input} onChange={e => setInput(e.target.value)} className="flex-1 p-6 border-4 rounded-[2.5rem] outline-none focus:border-slate-900 text-2xl mb-6" placeholder="请输入外交说辞..."/>
+                                    <button onClick={handleTalk} className="w-full bg-slate-900 text-white py-6 rounded-[2rem] font-black text-3xl shadow-xl">提交方案</button>
+                                </div>
+                            )}
+
+                            {gameState === 'loading' && (
+                                <div className="flex-1 flex flex-col items-center justify-center">
+                                    <div className="w-20 h-20 border-8 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <p className="mt-8 font-black text-3xl text-slate-400">正在审议 {currentGroup.name} 的文书...</p>
+                                </div>
+                            )}
+
+                            {/* 场景 5: 结果展示 */}
+                            {['result', 'win', 'gameover'].includes(gameState) && (
+                                <div className={`flex-1 flex flex-col items-center justify-center p-12 text-center ${gameState === 'gameover' ? 'bg-slate-900 text-white' : ''}`}>
+                                    <div className="text-9xl mb-6">{target?.icon}</div>
+                                    <div className={`p-10 rounded-[3rem] shadow-2xl w-full max-w-4xl border-4 ${gameState === 'win' ? 'bg-green-50 border-green-200' : (gameState === 'gameover' ? 'bg-slate-800 border-red-900' : 'bg-slate-50 border-slate-200')}`}>
+                                        <p className="text-3xl italic font-serif leading-snug font-bold">“{reply}”</p>
+                                        {gameState === 'win' && <div className="mt-4 text-green-600 font-black text-2xl animate-bounce">谈判成功！积分 +3%</div>}
+                                    </div>
+                                    <div className="mt-10 flex space-x-4">
+                                        {gameState !== 'gameover' && (
+                                            <button onClick={() => { setGameState('chatting'); updateActiveGroup({ status: 'chatting' }); }} className="bg-slate-800 text-white px-10 py-4 rounded-2xl font-black text-2xl">继续申辩</button>
+                                        )}
+                                        <button onClick={() => { setGameState('start'); updateActiveGroup({ status: 'start' }); }} className="bg-slate-200 text-slate-600 px-10 py-4 rounded-2xl font-black text-2xl">返回地图</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* 场景 6: 最终总结页面 */}
+                            {gameState === 'summary' && (
+                                <div className="flex-1 flex flex-col p-12 bg-white overflow-y-auto">
+                                    <div className="text-center mb-12">
+                                        <h2 className="text-6xl font-black text-slate-900 mb-2">外交风云：战报总结</h2>
+                                        <p className="text-slate-400 font-bold">谁才是最终的北美外交领袖？</p>
+                                    </div>
+                                    
+                                    <div className="space-y-6 max-w-4xl mx-auto w-full">
+                                        {[...groupsData].sort((a,b) => b.support - a.support).map((g, idx) => (
+                                            <div key={idx} className={`p-8 rounded-[3rem] border-4 flex items-center space-x-8 transition-all ${idx === 0 ? 'border-yellow-400 bg-yellow-50 scale-105 shadow-xl' : 'border-slate-100 bg-slate-50'}`}>
+                                                <div className="text-5xl font-black text-slate-300 w-12">{idx + 1}</div>
+                                                <div className="flex-1">
+                                                    <div className="flex justify-between items-end mb-2">
+                                                        <span className="text-3xl font-black">{g.name}</span>
+                                                        <span className="text-2xl font-bold text-blue-600">{g.support}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-200 h-6 rounded-full overflow-hidden">
+                                                        <div className={`h-full score-bar ${idx === 0 ? 'bg-yellow-500' : 'bg-blue-500'}`} style={{width: `${g.support}%`}}></div>
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className={`px-4 py-2 rounded-full font-black text-white text-sm ${idx === 0 ? 'bg-yellow-600' : 'bg-slate-400'}`}>
+                                                        {getCoolName(g.support)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div className="text-center mt-12">
+                                        <button onClick={() => setGameState('start')} className="px-12 py-4 bg-slate-900 text-white rounded-2xl font-black text-xl">继续挑战</button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {/* 底部功能按钮 */}
+                        {gameState !== 'setup' && gameState !== 'naming' && gameState !== 'summary' && (
+                            <div className="mt-8 flex justify-center">
+                                <button 
+                                    onClick={() => setGameState('summary')}
+                                    className="bg-yellow-500 hover:bg-yellow-400 text-slate-900 px-12 py-6 rounded-full font-black text-3xl shadow-2xl transition-all hover:scale-110 flex items-center space-x-4"
+                                >
+                                    <span>🏆</span>
+                                    <span>查看最终排名</span>
+                                </button>
+                            </div>
+                        )}
+                    </main>
+
+                    <footer className="p-8 text-center text-slate-300 font-bold uppercase tracking-widest">
+                        History AI Diplomacy - Competitive Classroom System
+                    </footer>
+                    <audio ref={audioRef} className="hidden" />
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

@@ -1,57 +1,26 @@
 let groups = [];
 let currentGroup = 0;
-let apiKey = '';
-let selectedModel = '';
+let apiKey = ''; // 兼容旧代码，Worker 模式下不需要
+let selectedModel = 'gemini-2.0-flash';
 let bgmAudio = null;
+let audioCtx = null;
+let currentSysPrompt = '';
 
-function toggleModal(show) {
-    document.getElementById('guide-modal').style.display = show ? 'flex' : 'none';
-}
+const WORKER_URL = 'https://napoleon-ai.chewyenhan.workers.dev';
 
-function showToast(msg) {
-    const toast = document.getElementById('custom-toast');
-    toast.textContent = msg;
-    toast.style.display = 'block';
-    setTimeout(() => { toast.style.display = 'none'; }, 2000);
-}
-
+// UI Navigation
 function showPanel(id) {
     document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
 }
 
-async function detectModels() {
-    const key = document.getElementById('api-key-input').value.trim();
-    if (!key) { showToast("请输入API Key"); return; }
-    try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}`);
-        const data = await res.json();
-        const models = data.models.filter(m => m.name.includes('gemini') && m.supportedGenerationMethods.includes('generateContent'));
-        const sel = document.getElementById('model-select');
-        sel.innerHTML = '';
-        models.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value = m.name.replace('models/', '');
-            opt.textContent = m.displayName || m.name;
-            sel.appendChild(opt);
-        });
-        sel.style.display = 'block';
-        apiKey = key;
-        showToast("模型加载成功！");
-    } catch (e) {
-        showToast("检测失败，请检查网络或Key");
-    }
-}
-
 function initAll() {
-    const sel = document.getElementById('model-select');
-    if (sel.style.display === 'block') {
-        selectedModel = sel.value;
-    }
+    detectModels();
     initAudio();
     showPanel('p-setup');
 }
 
+// Player/Group Management
 function goNaming() {
     const c = parseInt(document.getElementById('g-count').value);
     const cont = document.getElementById('name-container');
@@ -67,12 +36,7 @@ function saveGroups() {
     groups = [];
     for (let i = 0; i < c; i++) {
         const val = document.getElementById(`gname-${i}`).value || `玩家 ${i+1}`;
-        groups.push({
-            name: val,
-            node: "START",
-            state: { army: 100, morale: 100, wealth: 50, order: 50, alliance: 0, dev: 0 },
-            done: false
-        });
+        groups.push({ name: val, node: "START", state: { army: 100, morale: 100, wealth: 50, order: 50, alliance: 0, dev: 0, chatTurns: 0, ending: "", score: 0, endingVerdict: 'failure' }, done: false });
     }
     renderMenu();
     showPanel('p-menu');
@@ -91,32 +55,33 @@ function renderMenu() {
         btn.onclick = () => { if (!g.done) startGame(idx); };
         list.appendChild(btn);
     });
-    if (allDone) {
-        list.innerHTML += `<h3 style="color:#c9a44c; margin-top:30px;">全部玩家已完成历史扮演！</h3>`;
-    }
-}
-
-function updateStatBar(g) {
-    document.getElementById('show-gname').textContent = g.name;
-    document.getElementById('show-stat').textContent = `兵力:${g.state.army} 历史偏离度:${g.state.dev}`;
+    document.getElementById('leaderboard-btn').style.display = groups.length > 0 ? 'block' : 'none';
 }
 
 function startGame(idx) {
     currentGroup = idx;
     showPanel('p-game');
-    document.getElementById('ai-chat-area').style.display = 'none';
-    document.getElementById('end-btn').style.display = 'none';
     renderNode();
 }
 
+function returnToMenu() {
+    renderMenu();
+    showPanel('p-menu');
+}
+
+// Game Node Rendering
 function renderNode() {
     const g = groups[currentGroup];
     const node = script[g.node];
     updateStatBar(g);
-    
-    document.getElementById('scene-img-area').innerHTML = node.img ? `<img src="${node.img}" style="max-width:100%; height:200px; border-radius:10px; border:2px solid #c9a44c;">` : '';
-    document.getElementById('story-text').innerHTML = node.text;
-    
+
+    document.getElementById('view-ending-btn').style.display = 'none';
+    document.getElementById('chat-input-area').style.display = 'flex';
+    document.getElementById('ai-chat-area').style.display = 'none';
+
+    const storyText = document.getElementById('story-text');
+    storyText.style.backgroundImage = node.img ? `url(${node.img})` : '';
+    storyText.innerHTML = `<div>${node.text}</div>`;
     speakText(node.text);
     
     const ca = document.getElementById('choices-area');
@@ -128,142 +93,184 @@ function renderNode() {
             btn.className = 'sys-btn';
             btn.textContent = c.text;
             btn.onclick = () => {
-                if (c.effect) {
-                    for (let k in c.effect) g.state[k] += c.effect[k];
-                }
+                if (c.effect) Object.keys(c.effect).forEach(k => g.state[k] += c.effect[k]);
                 g.node = c.target;
                 renderNode();
             };
             ca.appendChild(btn);
         });
     } else if (node.ai_eval) {
-        if (apiKey && selectedModel) {
-            startAIEval();
-        } else {
-            const btn = document.createElement('button');
-            btn.className = 'sys-btn';
-            btn.textContent = "结束剧情 (未配置API)";
-            btn.onclick = () => { g.done = true; document.getElementById('end-btn').style.display = 'block'; };
-            ca.appendChild(btn);
-        }
-    } else if (node.end) {
-        g.done = true;
-        document.getElementById('end-btn').style.display = 'block';
+        requestAIEval();
     }
 }
 
-function startAIEval() {
-    document.getElementById('ai-chat-area').style.display = 'flex';
-    document.getElementById('chat-history').innerHTML = `<p style="color:#c9a44c;">历史学家正在评估你的选择...</p>`;
-    requestAIEval();
-}
-
-async function requestAIEval() {
+// AI Interaction
+function requestAIEval() {
     const g = groups[currentGroup];
-    const node = script[g.node];
-    const role = node.ai_role || "officer";
     const dev = g.state.dev;
+    let difficultyContext = dev <= 20 ? "【简单难度】你对他充满好感。" : dev <= 60 ? "【困难难度】你对他充满怀疑。" : "【地狱难度】你对他充满愤怒。";
+    let roleContext = {
+        "officer": "你是面临退位的拿破仑。",
+        "judge": "你是维也纳会议的保守派巨头梅特涅。",
+        "coalition": "你是决定民族命运的大国君主沙皇亚历山大。"
+    }[script[g.node].ai_role];
+    currentSysPrompt = `${roleContext} 学生的历史偏离度为：${dev}。${difficultyContext} 
+    请根据他的发言，用50字内中文回复。
+    当这是第三次（最后一次）发言时，你必须给出最终判决，判决需包含两部分：
+    1. 面向学生的结局描述，格式为【结局：XXX】。
+    2. 一个机器可读的分类标签，格式为 [verdict:success] 或 [verdict:failure]。
+    示例：【结局：你捍卫了法治之光！】[verdict:success]`;
     
-    // 动态难度设定
-    let difficultyContext = "";
-    if (dev <= 20) {
-        difficultyContext = "【简单难度】由于该玩家之前的选择非常符合历史，你对他充满好感和信任。只要他的发言有一点点合理，你就会被说服。";
-    } else if (dev <= 60) {
-        difficultyContext = "【困难难度】由于该玩家之前的选择偏离了历史，你对他充满怀疑和防备。你需要他给出非常完美的逻辑和辞藻，才能赢得你的认可。";
-    } else {
-        difficultyContext = "【地狱难度】该玩家之前的选择完全违背了历史事实，导致了灾难！你对他充满敌意和愤怒。你一开始就打算处死或流放他，除非他能给出极其天才的历史逆转思路。";
-    }
-
-    let roleContext = "";
-    if (role === "officer") {
-        roleContext = `你现在是面临退位绝境的拿破仑。联军兵临城下。你要对你的军官（玩家）进行终局审判。决定是带着他决一死战，还是将他流放。`;
-    } else if (role === "judge") {
-        roleContext = `你现在是维也纳会议上的保守派巨头（如梅特涅）。你要审判这位法国大革命的内政官员（玩家），决定是否彻底废除《拿破仑法典》。`;
-    } else {
-        roleContext = `你现在是大国君主（如沙皇亚历山大）。你要面对这位企图争取民族独立的起义军领袖（玩家），决定是赐予他们独立，还是彻底镇压。`;
-    }
-
-    const sysPrompt = `${roleContext}
-现在有一位名为 [${g.name}] 的学生正在与你对话。
-该学生的历史偏离度为：${dev}。
-${difficultyContext}
-
-请根据他的历史偏离度和他在下方输入框中的发言，用严厉、充满戏剧性的中文回复他（100字左右）。
-最后必须明确给出他的最终命运（例如：【结局：法治之光长存】或【结局：帝国的陪葬品】）。`;
-    
-    // 开启聊天输入
+    document.getElementById('choices-area').innerHTML = '';
     document.getElementById('ai-chat-area').style.display = 'flex';
-    document.getElementById('chat-history').innerHTML = `<p style="color:#c9a44c;"><b>系统：</b><br>历史的终局已至。<br>当前你的历史偏离度为 ${dev}。<br>请在下方输入框中，用尽全力为自己的命运辩护吧！</p>`;
-    
-    // 绑定发送按钮事件
-    window.currentSysPrompt = sysPrompt;
+    document.getElementById('chat-history').innerHTML = `<p style="color:#c9a44c;"><b>系统：</b><br>历史的终局已至。你的历史偏离度为 ${dev}。你有三次发言机会，开始你的陈述！</p>`;
+    document.getElementById('chat-input').disabled = false;
+    document.getElementById('chat-input').focus();
 }
 
 async function sendChat() {
     const input = document.getElementById('chat-input');
-    const msg = input.value.trim();
-    if (!msg) return;
-    
+    const msg = input.value.trim(); if (!msg) return;
     const g = groups[currentGroup];
-    input.value = '';
-    
+    input.value = ''; g.state.chatTurns++;
     const history = document.getElementById('chat-history');
-    history.innerHTML += `<p style="color:#fff;"><b>你：</b><br>${msg}</p>`;
+    history.innerHTML += `<p style="color:#fff;"><b>你 (${g.state.chatTurns}/3)：</b><br>${msg}</p>`;
+    history.scrollTop = history.scrollHeight;
+
+    let turnPrompt = g.state.chatTurns < 3 ? `这是第 ${g.state.chatTurns} 次发言。请追问或驳斥他。` : `这是最后一次发言。请给出最终判决。`;
+    input.disabled = true;
+    history.innerHTML += `<p style="color:#c9a44c;" id="ai-thinking"><i>...</i></p>`;
     
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${selectedModel}:generateContent?key=${apiKey}`;
-        const res = await fetch(url, {
-            method: 'POST',
+        const res = await fetch(`${WORKER_URL}/gemini`, {
+            method: 'POST', 
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ 
-                system_instruction: { parts: [{ text: window.currentSysPrompt }] },
-                contents: [{ role: 'user', parts: [{ text: msg }] }] 
+                model: selectedModel,
+                system_instruction: { parts: [{ text: currentSysPrompt }] }, 
+                contents: [{ role: 'user', parts: [{ text: `玩家发言是：“${msg}”。${turnPrompt}` }] }] 
             })
         });
         const data = await res.json();
         const reply = data.candidates[0].content.parts[0].text;
-        history.innerHTML += `<p style="color:#f4ecd8;"><b>AI 判决：</b><br>${reply}</p>`;
-        speakText(reply);
+        document.getElementById('ai-thinking').remove();
         
-        // 发言一次后即结束当前玩家的游戏
-        document.getElementById('chat-input').disabled = true;
-        g.done = true;
-        document.getElementById('end-btn').style.display = 'block';
-        history.scrollTop = history.scrollHeight;
+        if (g.state.chatTurns >= 3) {
+            const verdictMatch = reply.match(/\[verdict:(success|failure)\]/);
+            g.endingVerdict = verdictMatch ? verdictMatch[1] : 'failure';
+            g.ending = reply.replace(/\[verdict:(success|failure)\]/, '').trim();
+            history.innerHTML += `<p style="color:#f4ecd8;"><b>AI 回应：</b><br>${g.ending}</p>`;
+            document.getElementById('chat-input-area').style.display = 'none';
+            document.getElementById('view-ending-btn').style.display = 'block';
+        } else {
+            history.innerHTML += `<p style="color:#f4ecd8;"><b>AI 回应：</b><br>${reply}</p>`;
+            input.disabled = false; input.focus();
+        }
+        speakText(reply);
     } catch (e) {
-        history.innerHTML += `<p style="color:red;">AI评估请求失败。</p>`;
-        g.done = true;
-        document.getElementById('end-btn').style.display = 'block';
+        document.getElementById('ai-thinking').remove();
+        history.innerHTML += `<p style="color:red;">AI请求失败。</p>`;
+        g.ending = "AI 请求失败，无法获得结局。";
+        document.getElementById('view-ending-btn').style.display = 'block';
     }
 }
 
-function returnToMenu() {
-    renderMenu();
-    showPanel('p-menu');
+function showEnding() {
+    const g = groups[currentGroup];
+    const isSuccess = g.endingVerdict === 'success';
+    
+    if (isSuccess) {
+        g.state.score += 50;
+        showToast(`历史性的决策！分数 +50`);
+    }
+
+    g.done = true;
+    showPanel('p-ending');
+    const content = document.getElementById('ending-content');
+    content.innerHTML = `<div class="final-ending-text">${g.ending.replace(/\n/g, '<br>')}</div>`;
+    playEndingSound(isSuccess);
 }
 
-function speakText(txt) {
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const vol = parseFloat(document.getElementById('vol-speech').value);
-    if (vol === 0) return;
-    const u = new SpeechSynthesisUtterance(txt.replace(/<[^>]+>/g, ''));
-    u.lang = 'zh-CN';
-    u.volume = vol;
-    window.speechSynthesis.speak(u);
-}
-
-function initAudio() {
-    if (bgmAudio) return;
-    
-    // 使用真实的古典音乐：柴可夫斯基《1812序曲》（维基共享资源公有领域音频）
-    bgmAudio = new Audio('https://upload.wikimedia.org/wikipedia/commons/b/b5/1812_Overture.ogg');
-    bgmAudio.loop = true;
-    bgmAudio.volume = parseFloat(document.getElementById('vol-drum').value);
-    
-    bgmAudio.play().catch(e => console.log("浏览器限制了自动播放，需用户交互后恢复"));
-    
-    document.getElementById('vol-drum').addEventListener('input', (e) => {
-        if(bgmAudio) bgmAudio.volume = parseFloat(e.target.value);
+// Leaderboard & Utils
+function showLeaderboard() {
+    const content = document.getElementById('leaderboard-content');
+    content.innerHTML = '';
+    groups.sort((a, b) => b.state.score - a.state.score);
+    groups.forEach((g, index) => {
+        const entry = document.createElement('div');
+        entry.style.cssText = "background:var(--panel-bg);border:1px solid var(--accent-color);border-radius:8px;padding:15px;margin-bottom:10px;";
+        let endingHTML = g.done ? `<div class="final-ending-text" style="font-size: 1.8em;">${g.ending.replace(/\n/g, '<br>')}</div>` : `<p><i>尚未完成历史...</i></p>`;
+        const rankColors = ['#FFD700', '#C0C0C0', '#CD7F32'];
+        const rankText = index < 3 ? `第 ${index + 1} 名` : '';
+        const rankColor = rankColors[index] || 'var(--accent-color)';
+        entry.innerHTML = `
+            <h3 style="color:${rankColor}; margin-top:0; font-size: 1.8em;">${rankText} ${g.name} - 总分: ${g.state.score}</h3>
+            <p><b>最终属性:</b> 历史偏离度:<span style="color:${g.state.dev > 50 ? 'red' : '#0f0'};">${g.state.dev}</span></p>
+            <hr style="border-color: var(--accent-color);">
+            <b>AI 最终判决:</b>
+            ${endingHTML}
+        `;
+        content.appendChild(entry);
     });
+    showPanel('p-leaderboard');
+}
+
+function updateStatBar(g) {
+    document.getElementById('show-gname').textContent = g.name;
+    document.getElementById('show-stat').textContent = `历史偏离度: ${g.state.dev} | 分数: ${g.state.score}`;
+}
+function toggleModal(show) { document.getElementById('guide-modal').style.display = show ? 'flex' : 'none'; }
+function showToast(msg) { const t = document.getElementById('custom-toast'); t.textContent = msg; t.style.display = 'block'; setTimeout(() => { t.style.display = 'none'; }, 2000); }
+
+// Audio
+function playEndingSound(isSuccess) {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.4, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 1);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    if (isSuccess) { osc.type = 'triangle'; osc.frequency.setValueAtTime(523.25, audioCtx.currentTime); osc.frequency.linearRampToValueAtTime(783.99, audioCtx.currentTime + 1); } 
+    else { osc.type = 'sine'; osc.frequency.setValueAtTime(120, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(40, audioCtx.currentTime + 1); }
+    osc.start(); osc.stop(audioCtx.currentTime + 1);
+}
+function speakText(txt) { if (!window.speechSynthesis) return; window.speechSynthesis.cancel(); const vol = parseFloat(document.getElementById('vol-speech').value); if (vol === 0) return; const u = new SpeechSynthesisUtterance(txt.replace(/<[^>]+>/g, '').replace(/【.*?】/g, '')); u.lang = 'zh-CN'; u.volume = vol; window.speechSynthesis.speak(u); }
+function initAudio() { if (bgmAudio) return; bgmAudio = new Audio('assets/1812_overture.ogg'); bgmAudio.loop = true; bgmAudio.volume = parseFloat(document.getElementById('vol-drum').value); bgmAudio.play().catch(e => console.log("Audio autoplay blocked by browser.")); document.getElementById('vol-drum').addEventListener('input', (e) => { if(bgmAudio) bgmAudio.volume = parseFloat(e.target.value); }); }
+
+// API Detection
+async function detectModels() {
+    const sel = document.getElementById('model-select');
+    const status = document.getElementById('model-status');
+    try {
+        const res = await fetch(`${WORKER_URL}/models`);
+        const data = await res.json();
+        sel.innerHTML = '';
+        if (data.models) {
+            data.models.forEach(m => { 
+                const opt = document.createElement('option'); 
+                opt.value = m.name.replace('models/', ''); 
+                opt.textContent = m.displayName || m.name; 
+                sel.appendChild(opt); 
+            });
+        }
+        if (sel.options.length > 0) {
+            sel.selectedIndex = 0;
+            selectedModel = sel.value;
+            if (status) status.innerText = "✅ AI 服务连接成功";
+            sel.style.display = 'block';
+        } else {
+            throw new Error("No models returned");
+        }
+    } catch (e) { 
+        console.warn("模型加载失败，使用默认列表", e);
+        if (status) status.innerText = "⚠️ 自动连接失败，使用内置线路";
+        sel.innerHTML = '';
+        ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'].forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            sel.appendChild(opt);
+        });
+        sel.selectedIndex = 0;
+        selectedModel = sel.value;
+        sel.style.display = 'block';
+    }
 }
