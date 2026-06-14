@@ -137,6 +137,9 @@ async function sendChat() {
     history.innerHTML += `<p style="color:#fff;"><b>你 (${g.state.chatTurns}/3)：</b><br>${msg}</p>`;
     history.scrollTop = history.scrollHeight;
 
+    // 实时读取用户选择的模型
+    const model = document.getElementById('model-select').value || selectedModel;
+
     let turnPrompt = g.state.chatTurns < 3 ? `这是第 ${g.state.chatTurns} 次发言。请追问或驳斥他。` : `这是最后一次发言。请给出最终判决。`;
     input.disabled = true;
     history.innerHTML += `<p style="color:#c9a44c;" id="ai-thinking"><i>...</i></p>`;
@@ -146,7 +149,7 @@ async function sendChat() {
             method: 'POST', 
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ 
-                model: selectedModel,
+                model: model,
                 system_instruction: { parts: [{ text: currentSysPrompt }] }, 
                 contents: [{ role: 'user', parts: [{ text: `玩家发言是：“${msg}”。${turnPrompt}` }] }] 
             })
