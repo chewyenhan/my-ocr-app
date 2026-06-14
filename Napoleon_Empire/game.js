@@ -277,3 +277,6 @@ async function detectModels() {
         sel.style.display = 'block';
     }
 }
+
+// 自动初始化：在页面加载时检测模型
+detectModels();
