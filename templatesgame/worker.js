@@ -1,41 +1,77 @@
 // ==========================================
-// Cloudflare Worker — 模板游戏 Gemini API 代理
-// 把 API Key 藏在 Worker 环境变量里，学生无需手动输入
+// Cloudflare Worker — 模板游戏 Gemini API 安全代理
+// API Key 仅存于 env.GEMINI_API_KEY，永不下发
+// 部署: npx wrangler deploy (需先 npx wrangler secret put GEMINI_API_KEY)
 // ==========================================
+
+const rateMap = new Map();
 
 export default {
   async fetch(request, env) {
+    const origin = request.headers.get('Origin') || '';
+
+    // --- CORS 白名单 ---
+    const isAllowed =
+      origin === 'https://chewyenhan.github.io' ||
+      origin.startsWith('http://localhost') ||
+      origin.startsWith('http://127.0.0.1');
+
+    if (!isAllowed) {
+      return new Response('CORS Blocked', { status: 403 });
+    }
+
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': origin,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type'
+    };
+
+    if (request.method === 'OPTIONS') {
+      return new Response(null, { headers: corsHeaders });
+    }
+
     const url = new URL(request.url);
 
-    // --- CORS 预检 ---
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': 'https://chewyenhan.github.io',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type'
-        }
-      });
-    }
-
-    const corsHeaders = { 'Access-Control-Allow-Origin': 'https://chewyenhan.github.io' };
-
-    // --- 端点 1: 获取模型列表 ---
+    // --- GET /models ---
     if (url.pathname === '/models' && request.method === 'GET') {
-      const models = {
+      return new Response(JSON.stringify({
         models: [
-          { name: 'models/gemini-2.0-flash', displayName: 'Gemini 2.0 Flash (推荐)' },
+          { name: 'models/gemini-2.5-flash', displayName: 'Gemini 2.5 Flash (推荐)' },
+          { name: 'models/gemini-2.5-pro',   displayName: 'Gemini 2.5 Pro' },
+          { name: 'models/gemini-2.0-flash', displayName: 'Gemini 2.0 Flash' },
           { name: 'models/gemini-1.5-flash', displayName: 'Gemini 1.5 Flash' },
-          { name: 'models/gemini-1.5-pro', displayName: 'Gemini 1.5 Pro' }
+          { name: 'models/gemini-1.5-pro',   displayName: 'Gemini 1.5 Pro' }
         ]
-      };
-      return new Response(JSON.stringify(models), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      });
+      }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    // --- 端点 2: Gemini 对话 ---
+    // --- POST /gemini（带速率限制） ---
     if (url.pathname === '/gemini' && request.method === 'POST') {
+      const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+      const now = Date.now();
+      const windowMs = 60_000;
+      const maxReq = 15;
+
+      let entry = rateMap.get(ip);
+      if (!entry || (now - entry.resetAt) > windowMs) {
+        entry = { count: 0, resetAt: now + windowMs };
+        rateMap.set(ip, entry);
+      }
+
+      entry.count++;
+      if (entry.count > maxReq) {
+        return new Response(JSON.stringify({ error: '请求过于频繁，请稍后再试' }), {
+          status: 429,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (Math.random() < 0.01) {
+        for (const [k, v] of rateMap) {
+          if (now > v.resetAt) rateMap.delete(k);
+        }
+      }
+
       try {
         const body = await request.json();
         const model = body.model || 'gemini-2.0-flash';
@@ -61,14 +97,13 @@ export default {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       } catch (e) {
-        return new Response(JSON.stringify({ error: 'AI 请求失败' }), {
+        return new Response(JSON.stringify({ error: 'AI 请求失败: ' + e.message }), {
           status: 502,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
     }
 
-    // --- 其他路径 ---
     return new Response('Not found', { status: 404, headers: corsHeaders });
   }
 };
