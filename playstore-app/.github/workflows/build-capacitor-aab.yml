@@ -1,0 +1,42 @@
+name: Build Capacitor AAB
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: mingc/android-build-box:latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup keystore
+        run: |
+          cd android
+          cp ../keystore/snaptext-signing.keystore release.keystore
+
+      - name: Build AAB
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease
+        env:
+          STORE_PASS: ${{ secrets.KEYSTORE_PASS || 'android123' }}
+          KEY_PASS: ${{ secrets.KEY_PASS || 'android123' }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'snaptext' }}
+
+      - name: Collect AAB
+        run: |
+          mkdir -p output
+          find android -name "*.aab" -exec cp {} output/ \; 2>/dev/null
+          cp android/release.keystore output/ 2>/dev/null || true
+          ls -la output/
+
+      - name: Upload AAB
+        uses: actions/upload-artifact@v4
+        with:
+          name: snaptext-release-aab
+          path: output/
+          retention-days: 90

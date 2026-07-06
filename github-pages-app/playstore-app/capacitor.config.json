@@ -1,5 +1,0 @@
-{
-  "appId": "com.chewyenhan.snaptextocr",
-  "appName": "powershell -NoProfile -ExecutionPolicy Bypass -File .\\build-apk.ps1",
-  "webDir": "dist"
-}
