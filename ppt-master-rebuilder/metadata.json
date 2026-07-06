@@ -1,6 +1,0 @@
-{
-  "name": "PPT-Master-Rebuilder",
-  "description": "An interactive, visual-reconstruction tool that uses Gemini to analyze uneditable slide files (PDF/PPTX) and dynamically reconstructs them into clean, native, editable PPTX files.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}
