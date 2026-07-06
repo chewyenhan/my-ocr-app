@@ -5,3 +5,14 @@ hs_err_pid*.log
 signing-key-info.txt
 *.zip
 playstore/snaptext-signing.keystore
+
+# Independent repos / third-party
+Japan_conquer_Malaya/
+banana-slides/
+ppt-master/
+report-system/
+report-system2/
+research/
+.playwright-mcp/
+historysharing/
+hualianhistory/
