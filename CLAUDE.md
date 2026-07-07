@@ -165,6 +165,81 @@ form_teacher（班主任）, chinese_t, malay_t, english_t, math_t, computer_t, 
 - Worker secret：`GEMINI_API_KEY` 通过 `npx wrangler secret put` 设置
 - 封面图需同步到 `hualianhistory/malaya1941.png`
 
+## 项目：AI 全能竞技场（Quiz 游戏系列）
+
+### 概述
+- 全部部署在 `chewyenhan.github.io/hualianhistory/` 下
+- AI Worker：`hualianhistory-ai.chewyenhan.workers.dev`（`/gemini` 代理 Gemini API）
+- 技术栈：单 HTML 文件，Vanilla JS + Tailwind CSS CDN + Canvas
+- 支持科技风/奶油风主题切换，BGM 背景音乐，SpeechSynthesis TTS
+
+### 文件清单
+
+| 文件 | 用途 | 行数 |
+|------|------|------|
+| `quiz-start.html` | 入口门户，选择游戏模式 | ~300 |
+| `quiz.html` | 组别竞技版（多组对抗） | ~1100 |
+| `quiz-solo.html` | 个人挑战版（轮盘→翻牌→答题→排行榜） | ~1200 |
+| `quiz-battle.html` | 双人大决战（Canvas 战斗动画） | ~2200 |
+
+### 共同功能
+- AI 生成选择题（粘贴资料 / 上传 PDF/Word/PPTX）
+- 难度分配：简单/中等/困难，各自分值可配
+- 倒计时 + 语音朗读 + 知识精华总结
+- 下载独立 HTML（离线可玩）
+- 内置 fallback：API 不可用时自动生成备用题目
+
+### 双人大决战特有功能（quiz-battle.html）
+
+**战斗系统**：
+- 6 种职业：圣骑士(knight)、神箭手(archer)、大法师(mage)、暗影忍者(ninja)、维京战士(viking)、武士(samurai)
+- Canvas 像素风精灵（48×48 → 3x 渲染 = 144px），每职业 3 级进化外观
+- 抢答模式：WAITING_FOR_BUZZ → ANSWERING → (SECOND_CHANCE) → DONE
+
+**攻击动画（6 种弹道）**：
+| 职业 | 弹道 | 特效 |
+|------|------|------|
+| Knight 圣骑士 | 金色剑波 (6×36px) | 光晕阴影 |
+| Archer 神箭手 | 箭矢 (线宽5, 箭头8px) | 锐利穿刺 |
+| Mage 大法师 | 橙红火球 (外径20px + 核心10px) | 白热核心+尾焰 |
+| Ninja 暗影忍者 | 手里剑 (外径14, 内径5) | 旋转残影 |
+| Viking 维京战士 | 飞斧 (32×12 头 + 6×14 柄) | 沉重打击感 |
+| Samurai 武士 | 刀光斩 (4×50 + 50×6) | 横向斩击 |
+
+- 所有弹道带拖尾粒子（4 个透明度递减光点）
+- 弹道尺寸放大 30-50%，适配教室投屏
+
+**战败倒地系统**：
+- `leftFallen` / `rightFallen` 持久状态标记（每轮在 `startBattleRound` 重置）
+- FALL 动画 800ms（旋转 90° + 下坠），动画结束后静态绘制躺地精灵
+- 站立绘制 `drawCharacterAt()` 在 fallen 状态下跳过
+- `drawEffects()` 中额外绘制静态躺地精灵（旋转 90° 平躺在地面）
+
+**轮盘抽签**：
+- 双人对抗：先抽左方 → 确认 → 再抽右方 → 确认 → 进入选角
+- 胜者连庄：用 `spinForSlot()` 替换败方，保留胜方
+- ✅ 确认出战 / ⏭️ 缺席跳过 按钮（教师手动控制，不自动跳转）
+
+**评分系统**：
+- 三维评分：独立契机(0~12) / 民族代价(0~12) / 占领者信任(-7~12)
+- 4 种结局：民族觉醒者 / 两难幸存者 / 傀儡统治者 / 理想的殉道者
+
+### 个人挑战版特有功能（quiz-solo.html）
+
+**轮盘抽签**：
+- 单抽 → ✅ 确认出战 / ⏭️ 缺席跳过（与 battle 版同样的手动确认模式）
+- 不重复抽取（可切换允许重复）
+
+**卡牌阵列**：翻过的卡牌标记为已完成（灰色 + 🔒），剩余卡牌可选
+
+**排行榜**：按积分排序，题目答完显示"🏁 竞技圆满结束"
+
+### 关键设计点
+- Worker URL 硬编码于各 HTML，**不暴露 API Key 给学生**
+- 语音朗读默认开启（`config.voice`）
+- 键盘快捷键：空格键 → 知识总结 → 排行榜 → 下一位
+- 主题持久化：`localStorage.getItem('quiz_style')`
+
 ## 项目：Snaptext OCR（Play Store 上架中）
 
 ### 概述
