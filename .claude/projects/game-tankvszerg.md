@@ -12,13 +12,14 @@
 ## Features
 - 🎯 **Auto-aim toggle**: Press fire key to switch between AUTO (auto-target + auto-fire) and MANUAL modes
 - 💥 **Splash damage**: Bullets deal 50% collateral damage in 80px radius
-- 🔴🔵🟡 **Power-up system**: 10% drop — damage boost (red, +5×3 stacks), shield (blue, +20), nuke (yellow, max 3)
-- ☢️ **Nuke**: Q (P1) / U (P2) — instantly clears all on-screen zergs
-- 🛡️ **Shield**: E (P1) / I (P2) — +15 shield, 3s cooldown, passive regen 1/sec
+- 🔴🔵🟡 **Power-up system**: 10% drop — damage boost (red cannon, +5×3 stacks), swarm missile launcher (blue missile, 15s auto-homing), nuke (yellow radiation, max 3)
+- ☢️ **Nuke**: Q (P1) / U (P2) — instantly clears all on-screen zergs, count shown in HUD
+- 🚀 **Swarm Missile Launcher**: Pickup grants 15s of auto-tracking homing missiles (200ms fire rate, 20 dmg, 50px splash radius) — replaces old shield orb
+- 🛡️ **Shield**: E (P1) / I (P2) — +15 shield, 3s cooldown, passive regen 1/sec, starts full (30/30)
 - ⏱️ **Survival timer**: Counts UP from 0:00 — high score = longest survival
 - 📊 **Leaderboard on death**: Kills, max streak, waves survived, survival time, damage boost, nukes, final score
-- 🟢 **Ranged enemy (Spitter)**: Appears from wave 5+, slow bio-artillery that fires acid projectiles
-- 👑 **Boss waves**: Every 10 waves — super-sized Ultralisk with chase AI + 3-projectile spread attack
+- 🟢 **Ranged enemy (Spitter)**: Appears from wave 5+, fires acid projectiles (12 dmg, 12×12 body, 450px range, 1.8-2.2s fire rate)
+- 👑 **Boss waves**: Every 10 waves — two-phase fight: clear all normal zergs → boss spawns → kill boss → resume (state machine: clearing → boss_incoming → boss_fight → boss_down). Boss has top-screen HP bar, chase AI + 3-spread attack (20 dmg per projectile)
 - 🌍 **Dynamic difficulty**: Formula-based scaling (+8% per wave), endless endurance
 - 🏜️ **Desert battlefield**: Canvas-generated ground terrain (dirt, craters, tank tracks)
 - 🎨 **Kenney tank PNGs**: Real pixel-art tank sprites (`tank_red.png`, `tank_blue.png`), no transparency
@@ -62,12 +63,14 @@
 ## Controls
 | | Player 1 (Red) | Player 2 (Blue) |
 |--|----------------|-----------------|
-| Move | W/A/S/D | Arrow Keys |
-| Fire / Toggle Auto-Aim | Space | Enter |
+| Move | W/A/S/D (customizable) | Arrow Keys (customizable) |
+| Fire / Toggle Auto-Aim | Space (customizable) | Enter (customizable) |
 | Burst (costs 5 shield) | Shift | Right Shift |
-| Shield Boost | E | I |
-| Nuke | Q | U |
+| Shield Boost | E (customizable) | I (customizable) |
+| Nuke | Q (customizable) | U (customizable) |
 | Pause | ESC | ESC |
+
+- **Keybinding**: Menu screen "⚙ CUSTOMIZE CONTROLS" button → DOM overlay → click key → press new key → save. Persists via `localStorage`.
 
 ## Deployment
 ```bash
