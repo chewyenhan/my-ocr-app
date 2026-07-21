@@ -6,6 +6,7 @@
 - **Theme**: Tank(s) defend against endless waves of Zerg — survive as long as possible
 - **Framework**: Phaser.js 3.87 via CDN
 - **Deployment**: GitHub Pages (`chewyenhan.github.io/TankVsZerg/`)
+- **入口**: `chewyenhan.github.io/hualianhistory/` → 🎮 小游戏 → Tank vs Zerg
 - **Worker**: None — pure local game
 - **Repository**: Independent git repo `TankVsZerg/`
 
