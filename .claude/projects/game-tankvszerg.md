@@ -23,8 +23,8 @@
 - 🌍 **Dynamic difficulty**: Formula-based scaling (+8% per wave), **co-op scaling** (×1.6 count, ×1.3 HP), **breathing waves** after boss (×0.5 count)
 - 🏜️ **Desert battlefield**: Canvas-generated ground terrain (dirt, craters, tank tracks)
 - 🎨 **Kenney tank PNGs**: Real pixel-art tank sprites (`tank_red.png`, `tank_blue.png`), no transparency
-- 🎵 **Real sound effects**: Downloaded CC0 SFX (shooting, explosions, power-ups, BGM) with oscillator fallback
-- 🔬 **Tech Tree**: Meta-progression system — 6 upgradable stats (attack, armor, fire rate, nuke cap, shield cap, swarm duration) with earned tech points, persisted in localStorage
+- 🎵 **Real sound effects**: Downloaded CC0 SFX (shooting, explosions, power-ups) with oscillator fallback. BGM plays only during boss fights
+- 🔬 **Tech Tree**: Meta-progression system — **P1/P2 independent trees** with 6 upgradable stats (attack, armor, fire rate, nuke cap, shield cap, swarm duration), earned per-player, persisted in localStorage with JSON import/export backup
 - ⚔ **Weapon Evolution**: 5-level in-game weapon system — Lv1 Single → Lv2 Dual → Lv3 Spread (5-way) → Lv4 Pierce (3-way) → Lv5 MAX Laser (beam + 80px splash)
 
 ## Enemy Types
@@ -48,8 +48,12 @@
 | Shield Cap | 0→5 | +5 shield/level (30→55) | ~975 |
 | Swarm Dur | 0→5 | +3s duration/level (15→30s) | ~800 |
 
-- Tech points earned: `wave × kills / 10` per run
-- Persisted in `localStorage` (`tankVszerg_techtree`)
+- **P1/P2 independent**: Each player has their own tree (`tankVszerg_techtree_p1` / `_p2`)
+- Tech points earned per-player: `wave × kills / 10`
+- Co-op mode: each player earns separately based on their own kills
+- Persisted in `localStorage` with **JSON Export/Import** for backup
+- Old single-tree saves auto-migrated to both players on first load
+- UI: P1/P2 tab switching, Export/Import buttons in tech tree panel
 
 ## Weapon Evolution
 | Level | Name | Pattern | Dmg Bonus | Exp Needed |
@@ -83,7 +87,7 @@
 - **Tanks/Bullets**: Kenney PNG assets (`assets/kenney_tanks/PNG/Retina/`), canvas fallback on load failure
 - **Zerg**: Canvas 2D procedural textures (draw functions in BootScene → PreloadScene)
 - HUD rendered via DOM overlay on top of canvas (HP bars, score, wave, survival timer, nuke display, weapon level)
-- Sound: Real WAV/MP3 SFX with oscillator fallback (Phaser Web Audio / HTML5 Audio)
+- Sound: Real WAV/MP3 SFX with oscillator fallback. BGM only during boss fights (starts on boss spawn, stops on boss death)
 - Bullet expiry: time-based (`expireAt` data) checked in update loop
 - Enemy AI: `updateEnemyAI()` handles spitter distance-keeping + boss chase + continuous fire
 - Enemy bullets: separate `enemyBullets` group (max 80), body.reset() on recycle, **manual distance collision fallback**
