@@ -12,17 +12,20 @@
 ## Features
 - 🎯 **Auto-aim toggle**: Press fire key to switch between AUTO (auto-target + auto-fire) and MANUAL modes
 - 💥 **Splash damage**: Bullets deal 50% collateral damage in 80px radius
-- 🔴🔵🟡 **Power-up system**: 10% drop — damage boost (red cannon, +5×3 stacks), swarm missile launcher (blue missile, 15s auto-homing), nuke (yellow radiation, max 3)
+- 🔴🔵🟡🟢 **Power-up system**: 10% drop — weapon EXP (red cannon, level up weapon), swarm missile launcher (blue missile, 15s auto-homing), nuke (yellow radiation, max 3+tech), heal (green cross, +30 HP)
 - ☢️ **Nuke**: Q (P1) / U (P2) — instantly clears all on-screen zergs, count shown in HUD
-- 🚀 **Swarm Missile Launcher**: Pickup grants 15s of auto-tracking homing missiles (200ms fire rate, 20 dmg, 50px splash radius) — replaces old shield orb
-- 🛡️ **Shield**: E (P1) / I (P2) — +15 shield, 3s cooldown, passive regen 1/sec, starts full (30/30)
+- 🚀 **Swarm Missile Launcher**: Pickup grants 15s (+tech) of auto-tracking homing missiles (200ms fire rate, 20 dmg, 50px splash radius)
+- 🛡️ **Shield**: E (P1) / I (P2) — +15 shield, 3s cooldown, passive regen 1/sec, starts full (30/30 + tech)
 - ⏱️ **Survival timer**: Counts UP from 0:00 — high score = longest survival
-- 📊 **Leaderboard on death**: Kills, max streak, waves survived, survival time, damage boost, nukes, final score
-- 🟢 **Ranged enemy (Spitter)**: Appears from wave 5+, fires acid projectiles (12 dmg, 12×12 body, 450px range, 1.8-2.2s fire rate)
-- 👑 **Boss waves**: Every 10 waves — two-phase fight: clear all normal zergs → boss spawns → kill boss → resume (state machine: clearing → boss_incoming → boss_fight → boss_down). Boss has top-screen HP bar, chase AI + 3-spread attack (20 dmg per projectile)
-- 🌍 **Dynamic difficulty**: Formula-based scaling (+8% per wave), endless endurance
+- 📊 **Leaderboard on death**: Kills, max streak, waves survived, survival time, weapon level, nukes, final score, tech points earned
+- 🟢 **Ranged enemy (Spitter)**: Appears from wave 5+, fires acid projectiles (12 dmg, 16×16 body, 450px range, 1.8-2.2s fire rate)
+- 👑 **Boss waves**: Every 10 waves — two-phase fight: clear all normal zergs → boss spawns → kill boss → resume (state machine: clearing → boss_incoming → boss_fight → boss_down). Boss has top-screen HP bar, chase AI + **continuous machine-gun fire** (250ms interval, 20 dmg, 300 speed)
+- 🌍 **Dynamic difficulty**: Formula-based scaling (+8% per wave), **co-op scaling** (×1.6 count, ×1.3 HP), **breathing waves** after boss (×0.5 count)
 - 🏜️ **Desert battlefield**: Canvas-generated ground terrain (dirt, craters, tank tracks)
 - 🎨 **Kenney tank PNGs**: Real pixel-art tank sprites (`tank_red.png`, `tank_blue.png`), no transparency
+- 🎵 **Real sound effects**: Downloaded CC0 SFX (shooting, explosions, power-ups, BGM) with oscillator fallback
+- 🔬 **Tech Tree**: Meta-progression system — 6 upgradable stats (attack, armor, fire rate, nuke cap, shield cap, swarm duration) with earned tech points, persisted in localStorage
+- ⚔ **Weapon Evolution**: 5-level in-game weapon system — Lv1 Single → Lv2 Dual → Lv3 Spread (5-way) → Lv4 Pierce (3-way) → Lv5 MAX Laser (beam + 80px splash)
 
 ## Enemy Types
 | Type | Size | Role | Special |
@@ -33,32 +36,60 @@
 | Roach | 48×38 | Armored tank | High HP, high damage |
 | Ultralisk | 72×56 | Mini-boss (every 5 waves) | Massive HP/damage |
 | **Spitter** | 52×42 | **Ranged artillery** | Fires acid projectiles, keeps distance |
-| **Boss Ultra** | 72×56 (×1.3 scale) | **Boss (every 10 waves)** | Chase AI + 3-spread projectile, 200+ HP |
+| **Boss Ultra** | 72×56 (×1.3 scale) | **Boss (every 10 waves)** | Chase AI + continuous machine-gun fire, 200+ HP |
+
+## Tech Tree
+| Tech | Levels | Effect | Total Cost |
+|------|--------|--------|------------|
+| Attack | 0→20 | +3 base dmg/level (15→75) | ~6200 |
+| Armor | 0→10 | +15 HP/level (100→250) | ~1625 |
+| Fire Rate | 0→5 | -60ms interval/level (500→200ms) | ~1200 |
+| Nuke Cap | 0→5 | +1 nuke/level (3→8) | ~1600 |
+| Shield Cap | 0→5 | +5 shield/level (30→55) | ~975 |
+| Swarm Dur | 0→5 | +3s duration/level (15→30s) | ~800 |
+
+- Tech points earned: `wave × kills / 10` per run
+- Persisted in `localStorage` (`tankVszerg_techtree`)
+
+## Weapon Evolution
+| Level | Name | Pattern | Dmg Bonus | Exp Needed |
+|-------|------|---------|-----------|------------|
+| Lv1 | Basic Cannon | 1 shot straight | +0 | 0 |
+| Lv2 | Dual Cannon | 2 parallel (8px gap) | +5 | 3 |
+| Lv3 | Spread Shot | 5-way fan (40°) | +10 | 6 (cumulative) |
+| Lv4 | Pierce Cannon | 3-way piercing | +15 | 11 |
+| Lv5 MAX | Super Laser | Beam + 80px splash | +25 | 19 |
+
+- Damage formula: `15 + TechTree.attack×3 + weaponBonus`
+- Each red power-up = +1 weapon EXP
+- Death resets weapon to Lv1
 
 ## File
 | File | Purpose |
 |------|---------|
-| `index.html` | Main page (Phaser canvas + HUD overlays) |
-| `style.css` | Fullscreen layout, HUD styling, overlays, scoreboard table |
-| `game.js` | Phaser.Game bootstrap, global handlers, GameData (survivalTime, waveNumber) |
+| `index.html` | Main page (Phaser canvas + HUD overlays + Tech Tree + Keybinding overlays) |
+| `style.css` | Fullscreen layout, HUD styling, overlays, scoreboard table, tech tree panel |
+| `game.js` | Phaser.Game bootstrap, GameData, TechTree, keybinding UI, tech tree UI |
 | `scenes/BootScene.js` | Canvas 2D sprite drawing functions (tank, zerg, bullets, spitter, explosion) |
-| `scenes/PreloadScene.js` | Loads Kenney tank/bullet PNGs, generates zerg/background/explosion textures |
-| `scenes/MenuScene.js` | Title screen, player naming, mode select, resets game state |
-| `scenes/GameScene.js` | Main gameplay: tanks, zerg, bullets, waves, collisions, power-ups, auto-aim, nukes, scoring, enemy AI |
+| `scenes/PreloadScene.js` | Loads Kenney tank/bullet PNGs + SFX audio files, generates zerg/background/explosion textures |
+| `scenes/MenuScene.js` | Title screen, player naming, mode select, tech tree button, resets game state |
+| `scenes/GameScene.js` | Main gameplay: tanks, zerg, bullets, waves, collisions, power-ups, auto-aim, nukes, scoring, weapon evolution, boss state machine, manual collision, enemy AI |
 | `scenes/GameOverScene.js` | (Unused — game over is DOM overlay in index.html) |
+| `assets/sfx/` | Downloaded CC0 sound effects (12 files, ~11.5 MB) |
 
 ## Architecture
 - Phaser.js 3.87 via CDN, ES module imports for scenes
 - Arcade physics (top-down, no gravity)
 - **Tanks/Bullets**: Kenney PNG assets (`assets/kenney_tanks/PNG/Retina/`), canvas fallback on load failure
 - **Zerg**: Canvas 2D procedural textures (draw functions in BootScene → PreloadScene)
-- HUD rendered via DOM overlay on top of canvas (HP bars, score, wave, survival timer)
-- Sound: Web Audio API oscillator synthesis (BGM + SFX)
+- HUD rendered via DOM overlay on top of canvas (HP bars, score, wave, survival timer, nuke display, weapon level)
+- Sound: Real WAV/MP3 SFX with oscillator fallback (Phaser Web Audio / HTML5 Audio)
 - Bullet expiry: time-based (`expireAt` data) checked in update loop
-- Enemy AI: `updateEnemyAI()` handles spitter distance-keeping + boss chase + spread-fire
-- Enemy bullets: separate `enemyBullets` group (max 80), body.reset() on recycle
+- Enemy AI: `updateEnemyAI()` handles spitter distance-keeping + boss chase + continuous fire
+- Enemy bullets: separate `enemyBullets` group (max 80), body.reset() on recycle, **manual distance collision fallback**
 - Shield: 3s cooldown prevents spam; passive regen 1/sec
-- **No round system** — endless survival; tank death → leaderboard immediately
+- **Weapon evolution**: 5 levels, fireBullet() switch-based pattern generation
+- **No round system** — endless survival; tank death → leaderboard with tech points
 
 ## Controls
 | | Player 1 (Red) | Player 2 (Blue) |
@@ -71,6 +102,7 @@
 | Pause | ESC | ESC |
 
 - **Keybinding**: Menu screen "⚙ CUSTOMIZE CONTROLS" button → DOM overlay → click key → press new key → save. Persists via `localStorage`.
+- **Tech Tree**: Menu screen "🔬 TECH TREE" button → DOM overlay → view/upgrade stats.
 
 ## Deployment
 ```bash
