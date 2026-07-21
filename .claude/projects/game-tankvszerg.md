@@ -13,13 +13,14 @@
 - 🎯 **Auto-aim toggle**: Press fire key to switch between AUTO (auto-target + auto-fire) and MANUAL modes
 - 💥 **Splash damage**: Bullets deal 50% collateral damage in 80px radius
 - 🔴🔵🟡🟢 **Power-up system**: 10% drop — weapon EXP (red cannon, level up weapon), swarm missile launcher (blue missile, 15s auto-homing), nuke (yellow radiation, max 3+tech), heal (green cross, +30 HP)
+- ❌ **No nuke chain**: Zergs killed by nuke drop no power-ups — prevents infinite nuke loop
 - ☢️ **Nuke**: Q (P1) / U (P2) — instantly clears all on-screen zergs, count shown in HUD
 - 🚀 **Swarm Missile Launcher**: Pickup grants 15s (+tech) of auto-tracking homing missiles (200ms fire rate, 20 dmg, 50px splash radius)
 - 🛡️ **Shield**: E (P1) / I (P2) — +15 shield, 3s cooldown, passive regen 1/sec, starts full (30/30 + tech)
 - ⏱️ **Survival timer**: Counts UP from 0:00 — high score = longest survival
 - 📊 **Leaderboard on death**: Kills, max streak, waves survived, survival time, weapon level, nukes, final score, tech points earned
 - 🟢 **Ranged enemy (Spitter)**: Appears from wave 5+, fires acid projectiles (12 dmg, 16×16 body, 450px range, 1.8-2.2s fire rate)
-- 👑 **Boss waves**: Every 10 waves — two-phase fight: clear all normal zergs → boss spawns → kill boss → resume (state machine: clearing → boss_incoming → boss_fight → boss_down). Boss has top-screen HP bar, chase AI + **continuous machine-gun fire** (250ms interval, 20 dmg, 300 speed)
+- 👑 **Boss waves**: Every 10 waves — two-phase fight. Boss HP: `2000+wave×300` (10x scaling), damage `15+wave×2`, **spread fire**: 1 bullet at wave 10, +1 every 10 waves. Short 3-beep alarm on entry, BGM during fight only
 - 🌍 **Dynamic difficulty**: Formula-based scaling (+8% per wave), **co-op scaling** (×1.6 count, ×1.3 HP), **breathing waves** after boss (×0.5 count)
 - 🏜️ **Desert battlefield**: Canvas-generated ground terrain (dirt, craters, tank tracks)
 - 🎨 **Kenney tank PNGs**: Real pixel-art tank sprites (`tank_red.png`, `tank_blue.png`), no transparency
