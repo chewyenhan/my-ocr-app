@@ -4,7 +4,7 @@
 - **类型**：AI 生成选择题 + Canvas 游戏
 - **仓库**：`chewyenhan/hualianhistory`（git submodule 在 `hualianhistory/`）
 - **部署**：`chewyenhan.github.io/hualianhistory/`
-- **Worker**：`hualianhistory-ai.chewyenhan.workers.dev`（`/gemini` 代理 Gemini API，模型：`gemini-3.5-flash-lite`，单免费 Key）
+- **Worker**：`hualianhistory-ai.chewyenhan.workers.dev`（`/gemini` 代理 Gemini API，默认 `gemini-3.5-flash-lite`，前端可选模型，单免费 Key）
 
 ## 文件清单
 | 文件 | 用途 | 行数 |
@@ -79,7 +79,7 @@
 
 ## 关键设计
 - Worker URL 硬编码，**不暴露 API Key 给学生**
-- **已切换**（2026-07-27）：统一迁移至 `gemini-3.5-flash-lite`，仅使用单免费 API Key（移除付费 Key 兜底逻辑）
+- **已切换**（2026-07-27）：默认 `gemini-3.5-flash-lite`，仅单免费 API Key（移除付费 Key 兜底），Worker 不再硬编码模型——前端 `/models` 探测后可自由切换
 - 语音朗读默认开启（`config.voice`）
 - 键盘快捷键：空格键 → 知识总结 → 排行榜 → 下一位
 - 主题持久化：`localStorage.getItem('quiz_style')`

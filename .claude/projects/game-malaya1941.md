@@ -5,7 +5,7 @@
 - **课程**：独中高三《马来西亚史》
 - **仓库**：`chewyenhan/Japan_conquer_Malaya`（独立 git）
 - **部署**：`chewyenhan.github.io/Japan_conquer_Malaya/`
-- **Worker**：`malaya1941-ai.chewyenhan.workers.dev`（模型：`gemini-3.5-flash-lite`，单免费 Key）
+- **Worker**：`malaya1941-ai.chewyenhan.workers.dev`（默认 `gemini-3.5-flash-lite`，前端可选模型，单免费 Key）
 - **入口**：`chewyenhan.github.io/hualianhistory/` → ⚔️ 沉浸式历史游戏 → 马来亚1941
 
 ## 内容
@@ -35,7 +35,7 @@
 ## 架构
 遵循 `_SHARED.md` §历史游戏模板。不同于其他三个游戏（单 HTML 而非 game.js + story.js）。
 
-Worker 端点：`GET /models` + `POST /gemini`。模型：Worker 端硬编码 `gemini-3.5-flash-lite`。
+Worker 端点：`GET /models` + `POST /gemini`。模型：前端传参，Worker 透传，默认 `gemini-3.5-flash-lite`。
 
 ## 部署
 ```bash

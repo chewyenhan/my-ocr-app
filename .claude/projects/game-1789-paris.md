@@ -5,7 +5,7 @@
 - **课程**：独中初一历史 — 法国大革命
 - **仓库**：`chewyenhan/-`（独立 git）
 - **部署**：`chewyenhan.github.io/-/`
-- **Worker**：`paris-ai.chewyenhan.workers.dev`（模型：`gemini-3.5-flash-lite`，单免费 Key）
+- **Worker**：`paris-ai.chewyenhan.workers.dev`（默认 `gemini-3.5-flash-lite`，前端可选模型，单免费 Key）
 
 ## 内容
 玩家扮演不同社会等级角色，在 1789 年巴黎与路易十六进行 AI 对话谈判。覆盖：三级会议、国民议会、攻占巴士底狱。选择影响三维度：革命值 / 王权 / 民愤。
@@ -21,7 +21,7 @@
 | `wrangler.jsonc` | Wrangler 配置 |
 
 ## 架构
-遵循 `_SHARED.md` §历史游戏模板。Worker 端点：`GET /models` + `POST /gemini`。CORS：`chewyenhan.github.io`。限流：15 req/min。API Key：`GEMINI_API_KEY`（Cloudflare Secret，**单免费 Key，无付费兜底**）。模型：Worker 端硬编码 `gemini-3.5-flash-lite`。
+遵循 `_SHARED.md` §历史游戏模板。Worker 端点：`GET /models` + `POST /gemini`。CORS：`chewyenhan.github.io`。限流：15 req/min。API Key：`GEMINI_API_KEY`（Cloudflare Secret，**单免费 Key，无付费兜底**）。模型：前端传参，Worker 透传，默认 `gemini-3.5-flash-lite`。
 
 ## 部署
 ```bash
