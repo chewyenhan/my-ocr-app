@@ -9,6 +9,7 @@
 ## 文件清单
 | 文件 | 用途 | 行数 |
 |------|------|------|
+| `index.html` | 🏠 **主页门户**：展示全部 Quiz 模式 + 历史游戏 + 教学工具入口 | ~700 |
 | `quiz-start.html` | 入口门户，选择游戏模式 | ~280 |
 | `quiz.html` | 组别竞技版（多组对抗） | ~1100 |
 | `quiz-solo.html` | 个人挑战版（轮盘→翻牌→答题→排行榜） | ~1200 |
@@ -17,6 +18,12 @@
 ## 技术栈
 - 单 HTML 文件，Vanilla JS + Tailwind CSS CDN + Canvas
 - 科技风/奶油风主题切换，BGM 背景音乐，SpeechSynthesis TTS
+- 🎨 **frontend-design skill**：主页 `index.html` 设计审核与美化，注重 Typography / Spacing / Color 的独特性
+
+## Skills 参考
+| Skill | 用途 |
+|-------|------|
+| `frontend-design` | 主页视觉审核 — 暗色主题（slate-900）+ 金色点缀 + Noto Serif SC 衬线字体 + 粒子背景 + 滚动渐显动画 |
 
 ## 共同功能
 - AI 生成选择题（粘贴资料 / 上传 PDF/Word/PPTX）
@@ -65,8 +72,14 @@
 - **结束条件**：只剩 ≤1 组存活 或 题目用尽 → 组别排行榜
 - **战斗核心**：完全复用双人决战的 `startBattleRound()` / `handleBuzzer()` / `resolveRound()` 等，零改动
 
+### 提前结束功能（2026-07-21）
+- **轮盘页面底部**：始终显示 "🏆 提前结束 · 查看排行榜" 按钮，教师可随时终止比赛
+- **自动结束**：当所有学生都已被轮盘选中过且无未淘汰学生时，自动跳转排行榜，不再轮回复活已淘汰学生
+- 双人决战和组别决战模式均支持
+
 ## 关键设计
 - Worker URL 硬编码，**不暴露 API Key 给学生**
+- **模型已锁定**（2026-07-17 起）：Worker 端强制 `gemini-2.5-flash`，页面模型下拉框 / localStorage 记忆的选择一律被忽略（因免费档只有 flash 有额度，pro/2.0 免费额度=0 会 100% 走付费）
 - 语音朗读默认开启（`config.voice`）
 - 键盘快捷键：空格键 → 知识总结 → 排行榜 → 下一位
 - 主题持久化：`localStorage.getItem('quiz_style')`
