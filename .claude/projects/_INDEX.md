@@ -40,8 +40,8 @@
 
 | 项目 | 知识文件 | 班级 | 独立仓库 | Worker | 前端 |
 |------|----------|------|----------|--------|------|
-| S3F 高三孝 | `report-s3f.md` | S3F (17科, 2组, 31人) | ❌ (前端需单独 push) | `hualianhistory-reports.chewyenhan.workers.dev` | `chewyenhan.github.io/reports/` |
-| J2Y 初二忠 | `report-j2y.md` | J2Y (11科, 1组, 36人) | ❌ (前端需单独 push) | `j2y-reports.chewyenhan.workers.dev` | `chewyenhan.github.io/reports-j2y/` |
+| S3F 高三孝 | `report-s3f.md` | S3F (17科, 2组, 31人) | 🔒 (Private) | `hualianhistory-reports.chewyenhan.workers.dev` | `s3f-reports.pages.dev` (已迁移) |
+| J2Y 初二忠 | `report-j2y.md` | J2Y (11科, 1组, 36人) | 🔒 (Private) | `j2y-reports.chewyenhan.workers.dev` | `j2y-reports.pages.dev` (已迁移) |
 
 **共享架构**：见 `_SHARED.md` §评语系统基架（Worker + D1 + Pico.css 前端）
 
@@ -59,6 +59,25 @@
 |------|----------|------|------|------|
 | 焕灯 Huandeng | `huandeng.md` | Web 应用 (Flask + React) | `chewyenhan/huandeng` | HF Spaces `empty5354-huandeng.hf.space` |
 | PPT Master | `ppt-master.md` | Claude Code Skill | ⚠️ `hugohe3/ppt-master` (fork) | `hugohe3.github.io/ppt-master/` |
+
+## 教学 Skill（Claude Code 本地）
+
+| Skill | 文件 | 语言 | 格式 | 课时 | 适用 |
+|-------|------|------|------|------|------|
+| lesson-plan | `.claude/skills/lesson-plan/SKILL.md` | 马来文 | RPM + PH（政府格式） | 45 min | 独中历史（马来文班） |
+| lesson-plan-zh | `.claude/skills/lesson-plan-zh/SKILL.md` | 中文 | 5段式（目标/导入/教学/AI游戏/评价） | 35 min | 独中历史（中文班），可选 NotebookLM 生成 Q 版 PPT |
+| frontend-design | `.claude/skills/frontend-design/SKILL.md` | - | 设计系统 + shadcn/ui + dataviz + Dashboard 模板 | - | UI 设计、前端页面、组件库、仪表盘 |
+
+**frontend-design 附加功能**：8 种美学锚点、设计 Token、shadcn/ui 组件模板、Dashboard 布局模板、ECharts/Chart.js 图表配置、NotebookLM 内容生成。
+
+---
+
+## 前端 Skills（Claude Code 本地）
+
+| Skill | 文件 | 功能 | 适用 |
+|-------|------|------|------|
+| dataviz | 见技能列表 | 数据可视化、图表生成、仪表盘设计 | 创建图表、数据展示 |
+| notebooklm | `.claude/skills/notebooklm/SKILL.md` | Chrome DevTools 操作 NotebookLM | 导入文本、生成 PPT/学习指南 |
 
 ## 移动应用
 
