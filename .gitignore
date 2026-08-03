@@ -1,3 +1,4 @@
+__pycache__/
 node_modules/
 *.log
 hs_err_pid*.log
@@ -5,6 +6,13 @@ hs_err_pid*.log
 signing-key-info.txt
 *.zip
 playstore/snaptext-signing.keystore
+
+# Game projects (独立 Git 仓库，不从根推送)
+1789-paris-survival-guide/
+Napoleon_Empire/
+Melaka_Project/
+TankVsZerg/
+chess-system/
 
 # Independent repos / third-party
 Japan_conquer_Malaya/
@@ -16,3 +24,18 @@ research/
 .playwright-mcp/
 historysharing/
 hualianhistory/
+
+# Other projects (非 OCR)
+dongzonghistory/
+chewyenhan-github-io/
+github-pages-app/
+lesson plan/
+美国独立战争外交特使扮演/
+李廠長-notebook-lm-skills/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example
