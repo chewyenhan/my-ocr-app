@@ -393,6 +393,52 @@ start.bat
 ```
 浏览器打开 `http://localhost:3011`
 
+## 项目：星图照片分享系统 (-2026)
+
+> 状态：🔄 开发中 | 迁移到 Cloudflare Worker + Supabase | 2026-08-08
+
+### 概述
+- 仓库：`chewyenhan/-2026`（原 `vincecham91-png/-2026` 迁移）
+- 部署：GitHub Pages + Cloudflare Worker + Supabase
+- 功能：学生上传照片作品，教师后台查看统计和画廊
+
+### 技术栈
+- **前端**：HTML5 + CSS3 + Vanilla JS，无构建工具
+- **后端 Worker**：Cloudflare Worker + KV（图片 base64）
+- **后端数据库**：Supabase（PostgreSQL + Auth + Storage + Realtime）
+- **部署**：GitHub Pages（前端）+ Cloudflare Pages（Worker）
+
+### 文件结构
+```
+-2026/
+├── index.html, login.html, student.html, gallery.html
+├── teacher.html, teacher-login.html
+├── js/              ← 各页面 JS 模块
+├── css/             ← 样式表
+├── firebase/        ← Supabase 配置（supabaseConfig.js）
+├── config.public.js ← 全局 Supabase 凭证（不提交）
+├── data/students.json
+├── worker/          ← Cloudflare Worker 源码
+│   ├── src/index.js ← Worker 主代码
+│   ├── wrangler.toml ← 需填入 KV namespace ID 和 API Key
+│   └── src/init-kv.js ← 初始化脚本
+├── docs/            ← 项目文档
+└── scripts/         ← Excel 导入等工具
+```
+
+### 关键设计
+- 教师认证：Supabase Auth（email/password）
+- 学生认证：KV 存储的名单验证（email 在 Worker 中）
+- 图片存储：Supabase Storage（优先）→ Worker KV base64（备用）
+- 实时同步：Supabase Realtime（PostgreSQL Changes）
+
+### 部署清单
+1. **GitHub**：已推到 `chewyenhan/-2026`（私有仓库）
+2. **Supabase**：在 Dashboard 创建项目，执行 `docs/supabase-setup.sql`
+3. **Worker**：`cd -2026/worker && wrangler login && wrangler deploy`
+4. **GitHub Pages**：Settings → Pages → 选 main 分支
+5. **Config**：在 `config.public.js` 填入 Supabase URL 和 anon key
+
 ## 项目维护规则
 
 - **CLAUDE.md 是每个对话窗的入口**，新项目或旧项目有重大更新时，**主动**同步更新 CLAUDE.md（不等用户提醒）
