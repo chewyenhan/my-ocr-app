@@ -25,6 +25,17 @@ research/
 historysharing/
 hualianhistory/
 
+# Claude Code config (非 OCR，不推公开仓库)
+.claude/
+.agents/
+.github/skills/
+.vscode/
+CLAUDE.md
+session-prompt.md
+.mcp.json
+skills-lock.json
+-2026/
+
 # Other projects (非 OCR)
 dongzonghistory/
 chewyenhan-github-io/
